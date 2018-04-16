@@ -1,10 +1,18 @@
 package xpressutn.utils;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import xpressutn.annotations.Column;
 import xpressutn.annotations.Id;
@@ -52,5 +60,43 @@ public class XpressUTN
 		String nombresColumnasSeparadosComas = nombresColumnas.toString().replace("[", "").replace("]", "");
 		String query = "SELECT " + nombresColumnasSeparadosComas + " FROM " + claseNombre;
 		return query;
+	}
+
+	public void executePlainQuery(String query) throws SQLException
+	{
+	    Properties prop = new Properties();
+	    InputStream input = null;
+
+	    try {
+
+	        input = new FileInputStream("db.properties");
+
+	        // load a properties file
+	        prop.load(input);
+	        
+	        String conexion_url = prop.getProperty("jdbc.connection.url");
+	        String usuario_conexion = prop.getProperty("jdbc.connection.user");
+	        String usuario_password = prop.getProperty("jdbc.connection.password");
+
+	        // get the property value and print it out
+	        Connection con = DriverManager.getConnection(conexion_url,usuario_conexion,usuario_password);
+	        ResultSet rs = con.createStatement().executeQuery(query);
+	        while (rs.next()) {
+	            int idPersona = rs.getInt("id_persona");
+	            String nombre = rs.getString("nombre");
+	            System.out.println(idPersona + "\t" + nombre);
+	        }
+
+	    } catch (IOException ex) {
+	        ex.printStackTrace();
+	    } finally {
+	        if (input != null) {
+	            try {
+	                input.close();
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    }
 	}
 }
