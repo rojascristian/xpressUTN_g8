@@ -4,14 +4,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import xpressutn.annotations.Column;
@@ -19,11 +23,43 @@ import xpressutn.annotations.Id;
 import xpressutn.annotations.ManyToOne;
 import xpressutn.annotations.OneToMany;
 import xpressutn.annotations.Table;
+import xpressutn.modelo.Persona;
 
 public class XpressUTN
 {
+	public static Connection abirConexion() throws SQLException{
+		Properties prop = new Properties();
+	    InputStream input = null;
+	    Connection con = null;
+		try{
+			input = new FileInputStream("db.properties");
+	        prop.load(input);
+	        
+	        String conexion_url = prop.getProperty("jdbc.connection.url").trim();
+	        String usuario_conexion = prop.getProperty("jdbc.connection.user").trim();
+	        String usuario_password = prop.getProperty("jdbc.connection.password").trim();
+	
+	        con = DriverManager.getConnection(conexion_url,usuario_conexion,usuario_password);
+		}
+		catch (IOException ex) {
+	        ex.printStackTrace();
+	    } finally {
+	        if (input != null) {
+	            try {
+	                input.close();
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	    }
+		return con;
+	}
+	public static ResultSet executeQuery(String query) throws SQLException{
+		return abirConexion().createStatement().executeQuery(query); 
+	}	
 	public String findAll(Class clase){
 		List<String> nombresColumnas = new ArrayList<String>();
+		String column;
 		
 		// OBTENGO TODOS LOS ATRIBUTOS (publicos/privados)
 		final Field[] variables = clase.getDeclaredFields();
@@ -32,9 +68,11 @@ public class XpressUTN
 			// APARTO LOS ATRIBUTOS CON LA ANNOTATION COLUMN
 			if (variable.isAnnotationPresent(Column.class)) {	
 				Annotation anotacionObtenida = variable.getAnnotation(Column.class);
+				column = (((Column)anotacionObtenida).name().equals("")) ? variable.getName() :((Column)anotacionObtenida).name(); 
+				
 				try {
 					// ALMACENO LOS CAMPOS COLUMN
-					nombresColumnas.add(((Column)anotacionObtenida).name());
+					nombresColumnas.add(column);
 				} catch (IllegalArgumentException | SecurityException e) {
 					e.printStackTrace();
 				}
@@ -46,7 +84,7 @@ public class XpressUTN
 				// TODO: hacer lo correspondiente con los atributos @ManyToOne
 			}
 			if (variable.isAnnotationPresent(OneToMany.class)) {
-				// TODO: hacer lo correspondiente con los atributos @ManyToOne
+				// TODO: hacer lo correspondiente con los atrib utos @ManyToOne
 			}
 		}
 		
@@ -58,10 +96,49 @@ public class XpressUTN
 	private String queryFindAll(List<String> nombresColumnas, String claseNombre)
 	{
 		String nombresColumnasSeparadosComas = nombresColumnas.toString().replace("[", "").replace("]", "");
-		String query = "SELECT " + nombresColumnasSeparadosComas + " FROM " + claseNombre;
+		String query = "SELECT * FROM " + claseNombre;
 		return query;
 	}
 
+	public static <T> T find(Class<T> dtoClass, Object id) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, SQLException{
+		Constructor constructorDtoClass = dtoClass.getConstructor();
+		T objetoDtoClass = (T) constructorDtoClass.newInstance();
+		Field[] atributos = objetoDtoClass.getClass().getDeclaredFields();
+		Method setObject;
+		Method[] metodos = dtoClass.getMethods();;
+		String query = "SELECT ";
+		Map<String, String> column = new HashMap<String, String>();
+		String pk = "";
+		int i = 0;
+		Annotation anotacionObtenida;
+		for (final Field atributo : atributos) {
+			if (atributo.isAnnotationPresent(Column.class)){
+				anotacionObtenida = atributo.getAnnotation(Column.class);
+				column.put(atributo.getName(),(((Column)anotacionObtenida).name().equals("")) ? atributo.getName() :((Column)anotacionObtenida).name());
+				query = query + column.get(atributo.getName()) + ", ";	
+				if(atributo.isAnnotationPresent(Id.class)) pk = column.get(atributo.getName());
+				i++;
+			}
+		}
+		query = setSelectQuery(query, dtoClass.getAnnotation(Table.class).name(), pk, id);
+		System.out.println(query);
+		ResultSet rs = executeQuery(query);
+		rs.next();
+		for(Field atributo : atributos){
+			if(atributo.isAnnotationPresent(Column.class)){
+				for(Method metodo : metodos){	
+					if(metodo.getName().equals("set" + atributo.getName().substring(0,1).toUpperCase() + atributo.getName().substring(1)))
+						metodo.invoke(objetoDtoClass,rs.getObject(column.get(atributo.getName())));										
+				}
+			}
+		}
+		return objetoDtoClass;
+	}
+	
+	private static String setSelectQuery(String st, String tabla, String pk, Object id){
+		return st.substring(0, st.length() - 2) + " FROM " + tabla + " WHERE " + pk + "=" + id.toString() + ";";
+	}
+	
 	public void executePlainQuery(String query) throws SQLException
 	{
 	    Properties prop = new Properties();
@@ -74,17 +151,24 @@ public class XpressUTN
 	        // load a properties file
 	        prop.load(input);
 	        
-	        String conexion_url = prop.getProperty("jdbc.connection.url");
-	        String usuario_conexion = prop.getProperty("jdbc.connection.user");
-	        String usuario_password = prop.getProperty("jdbc.connection.password");
+	        String conexion_url = prop.getProperty("jdbc.connection.url").trim();
+	        String usuario_conexion = prop.getProperty("jdbc.connection.user").trim();
+	        String usuario_password = prop.getProperty("jdbc.connection.password").trim();
 
 	        // get the property value and print it out
 	        Connection con = DriverManager.getConnection(conexion_url,usuario_conexion,usuario_password);
 	        ResultSet rs = con.createStatement().executeQuery(query);
 	        while (rs.next()) {
-	            int idPersona = rs.getInt("id_persona");
-	            String nombre = rs.getString("nombre");
-	            System.out.println(idPersona + "\t" + nombre);
+//	            int idPersona = rs.getInt("id_persona");
+//	            String nombre = rs.getString("nombre");
+//	            String direccion = rs.getString("direccion");
+//	            Date fechaAlta = rs.getDate("fecha_alta");
+//	            System.out.println(idPersona + "\t" + nombre + "\t" + direccion + "\t" + fechaAlta);
+	        	int idUsuario = rs.getInt("id_usuario");
+	        	String username = rs.getString("username");
+	        	String password = rs.getString("password");
+	        	int idPersona = rs.getInt("id_persona");
+	        	System.out.println(idUsuario + "\t" + username + "\t" + password + "\t" + idPersona);
 	        }
 
 	    } catch (IOException ex) {
