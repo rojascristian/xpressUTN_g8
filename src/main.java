@@ -1,21 +1,14 @@
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
-import java.util.Properties;
-
-import org.hsqldb.Statement;
 
 import xpressutn.modelo.Persona;
+import xpressutn.modelo.Usuario;
 import xpressutn.utils.XpressUTN;
 
 public class main
 {
 
-	public static void main(String[] args)
+	public static void main(String[] args) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
 	{
 		XpressUTN xPress = new XpressUTN();
 		String query = xPress.findAll(Persona.class);
@@ -29,6 +22,19 @@ public class main
 		catch(SQLException e)
 		{
 			e.printStackTrace();
+		}
+		
+		try
+		{
+			Persona per = XpressUTN.find(Persona.class,new Integer(1));
+			System.out.println(per.toString());
+			Usuario usu = XpressUTN.find(Usuario.class,new Integer(1));
+			System.out.println(usu.toString());
+		}
+		catch(SQLException e1)
+		{
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 		
 		// TODO: 2. nos va a devolver un array(supongo), hay que recorrer ese array e instanciar la clase correspondiente y setear los atributos
