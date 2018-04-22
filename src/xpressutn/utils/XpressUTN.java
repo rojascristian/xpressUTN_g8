@@ -14,9 +14,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Queue;
 
 import xpressutn.annotations.Column;
 import xpressutn.annotations.Id;
@@ -57,7 +59,7 @@ public class XpressUTN
 	public static ResultSet executeQuery(String query) throws SQLException{
 		return abirConexion().createStatement().executeQuery(query); 
 	}	
-	public String findAll(Class clase){
+	public String findAll(Class<?> clase){
 		List<String> nombresColumnas = new ArrayList<String>();
 		String column;
 		
@@ -93,6 +95,7 @@ public class XpressUTN
 		return queryFindAll(nombresColumnas, ((Table)annotationTabla).name());
 	}
 
+	
 	private String queryFindAll(List<String> nombresColumnas, String claseNombre)
 	{
 		String nombresColumnasSeparadosComas = nombresColumnas.toString().replace("[", "").replace("]", "");
@@ -101,27 +104,29 @@ public class XpressUTN
 	}
 
 	public static <T> T find(Class<T> dtoClass, Object id) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, SQLException{
-		Constructor constructorDtoClass = dtoClass.getConstructor();
-		T objetoDtoClass = (T) constructorDtoClass.newInstance();
+		Constructor<T> constructorDtoClass = dtoClass.getConstructor();
+		T objetoDtoClass = constructorDtoClass.newInstance();
+		
 		Field[] atributos = objetoDtoClass.getClass().getDeclaredFields();
-		Method setObject;
-		Method[] metodos = dtoClass.getMethods();;
+		Method[] metodos = dtoClass.getMethods();
 		String query = "SELECT ";
 		Map<String, String> column = new HashMap<String, String>();
 		String pk = "";
-		int i = 0;
+		
 		Annotation anotacionObtenida;
 		for (final Field atributo : atributos) {
 			if (atributo.isAnnotationPresent(Column.class)){
 				anotacionObtenida = atributo.getAnnotation(Column.class);
 				column.put(atributo.getName(),(((Column)anotacionObtenida).name().equals("")) ? atributo.getName() :((Column)anotacionObtenida).name());
 				query = query + column.get(atributo.getName()) + ", ";	
-				if(atributo.isAnnotationPresent(Id.class)) pk = column.get(atributo.getName());
-				i++;
+				if(atributo.isAnnotationPresent(Id.class)) 
+					pk = column.get(atributo.getName());
+				
 			}
 		}
 		query = setSelectQuery(query, dtoClass.getAnnotation(Table.class).name(), pk, id);
-		System.out.println(query);
+		
+		//System.out.println(query);
 		ResultSet rs = executeQuery(query);
 		rs.next();
 		for(Field atributo : atributos){
@@ -182,5 +187,39 @@ public class XpressUTN
 	            }
 	        }
 	    }
+	}
+
+	public int insert(Class<?> clase) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
+	{
+		Field[] atributos = clase.getDeclaredFields();
+		Method[] metodos = clase.getMethods();
+		String query = "INSERT INTO" + clase.getAnnotation(Table.class).name() + " ";
+		Queue<String> valores = new LinkedList<>();
+		for(Field atributo : atributos)
+		{
+			if(atributo.isAnnotationPresent(Column.class))
+			{
+				String nombre = atributo.getAnnotation(Column.class).name();
+				for(Method getter : metodos)
+				{
+					//BUSCO LOS GETTERS PARA TRAER LA INFORMACION
+					if(getter.getName().equals("get" + atributo.getName().substring(0,1).toUpperCase() + atributo.getName().substring(1)))
+					{
+						//AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
+						valores.add(getter.invoke(clase).toString());
+						query += (nombre.equals("") ? atributo.getName() : nombre) + ", ";
+					}
+				}
+			}
+		}
+		//ELIMINO LA ULTIMA COMA
+		query = query.substring(0 , query.length() -2) + " VALUES ";
+		while(valores.size()>0)
+			query += valores.remove() + ", ";
+		query = query.substring(0 , query.length() -2) + ";";
+		
+		//ejecutar query. No se como hacerlo :p
+		
+		return 1;
 	}
 }
