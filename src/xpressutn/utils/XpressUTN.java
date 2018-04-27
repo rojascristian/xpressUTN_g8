@@ -29,7 +29,7 @@ import xpressutn.modelo.Persona;
 
 public class XpressUTN
 {
-	public static Connection abirConexion() throws SQLException{
+	public static Connection abrirConexion() throws SQLException{
 		Properties prop = new Properties();
 	    InputStream input = null;
 	    Connection con = null;
@@ -57,8 +57,9 @@ public class XpressUTN
 		return con;
 	}
 	public static ResultSet executeQuery(String query) throws SQLException{
-		return abirConexion().createStatement().executeQuery(query); 
+		return abrirConexion().createStatement().executeQuery(query); 
 	}	
+	
 	public String findAll(Class<?> clase){
 		List<String> nombresColumnas = new ArrayList<String>();
 		String column;
@@ -82,9 +83,12 @@ public class XpressUTN
 			if (variable.isAnnotationPresent(Id.class)) {
 				// TODO: hacer lo correspondiente con los atributos @ID
 			}
+//			ManyToOne -> default Eager (se puede especificar fetchType=ManyToOne.LAZY por si trae problemas)
+//			ManyToOne -> se traducen en un inner join
 			if (variable.isAnnotationPresent(ManyToOne.class)) {
 				// TODO: hacer lo correspondiente con los atributos @ManyToOne
 			}
+//			OneToMany -> son exclusivamente LAZY
 			if (variable.isAnnotationPresent(OneToMany.class)) {
 				// TODO: hacer lo correspondiente con los atrib utos @ManyToOne
 			}
@@ -93,6 +97,20 @@ public class XpressUTN
 		final Annotation annotationTabla = clase.getAnnotation(Table.class);
 		
 		return queryFindAll(nombresColumnas, ((Table)annotationTabla).name());
+/*
+		SETEAR LA LISTA<T> donde cada T tiene seteado los atributos primitivos
+		
+		//ManyToOne -> default Eager
+		if(tieneAtributosEAGER){
+			for(registro: lista){
+				for(atributoEager: atributosEager){
+				SELECT * FROM Usuario x WHERE x.idUsuario = ?
+					String xql = generarXQL(atributoEager.class, propiedadesFiltro[atributoEager.mappedBy])
+					registro.setAtributoEager(xpress.queryForSingleResult(registro.class, xql, registro.PK.value))
+				}
+			}
+		}
+*/		
 	}
 
 	
@@ -221,5 +239,9 @@ public class XpressUTN
 		//ejecutar query. No se como hacerlo :p
 		
 		return 1;
+	}
+	
+	public static <T> T queryForSingleRow(Class<T> dtoClass,String xql,Object args){
+		return null;
 	}
 }
