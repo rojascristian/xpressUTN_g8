@@ -29,7 +29,7 @@ import xpressutn.modelo.Persona;
 
 public class XpressUTN
 {
-	public static Connection abirConexion() throws SQLException{
+	public static Connection abrirConexion() throws SQLException{
 		Properties prop = new Properties();
 	    InputStream input = null;
 	    Connection con = null;
@@ -57,14 +57,17 @@ public class XpressUTN
 		return con;
 	}
 	public static ResultSet executeQuery(String query) throws SQLException{
-		return abirConexion().createStatement().executeQuery(query); 
+		return abrirConexion().createStatement().executeQuery(query); 
 	}	
-	public String findAll(Class<?> clase){
-		List<String> nombresColumnas = new ArrayList<String>();
+	
+	public static <T> List<T> findAll(Class<T> clase){
+//		List<String> nombresColumnas = new ArrayList<String>();
+		HashMap<String, String> propiedadesPrimitivas_HM = new HashMap<String, String>();
 		String column;
 		
 		// OBTENGO TODOS LOS ATRIBUTOS (publicos/privados)
 		final Field[] variables = clase.getDeclaredFields();
+		List<Field> listaAtributosEager = new ArrayList<Field>();
 		// RECORRO TODOS LOS ATRIBUTOS
 		for (final Field variable : variables) {
 			// APARTO LOS ATRIBUTOS CON LA ANNOTATION COLUMN
@@ -74,17 +77,23 @@ public class XpressUTN
 				
 				try {
 					// ALMACENO LOS CAMPOS COLUMN
-					nombresColumnas.add(column);
+//					nombresColumnas.add(column);
+					propiedadesPrimitivas_HM.put(variable.getName(), "=");
 				} catch (IllegalArgumentException | SecurityException e) {
 					e.printStackTrace();
 				}
 			}
 			if (variable.isAnnotationPresent(Id.class)) {
 				// TODO: hacer lo correspondiente con los atributos @ID
+				listaAtributosEager.add(variable);
 			}
+//			ManyToOne -> default Eager (se puede especificar fetchType=ManyToOne.LAZY por si trae problemas)
+//			ManyToOne -> se traducen en un inner join
 			if (variable.isAnnotationPresent(ManyToOne.class)) {
 				// TODO: hacer lo correspondiente con los atributos @ManyToOne
+				
 			}
+//			OneToMany -> son exclusivamente LAZY
 			if (variable.isAnnotationPresent(OneToMany.class)) {
 				// TODO: hacer lo correspondiente con los atrib utos @ManyToOne
 			}
@@ -92,15 +101,45 @@ public class XpressUTN
 		
 		final Annotation annotationTabla = clase.getAnnotation(Table.class);
 		
-		return queryFindAll(nombresColumnas, ((Table)annotationTabla).name());
+		String xql = generarQuery(clase, propiedadesPrimitivas_HM);
+		List<T> listaResultado = query(clase, xql, null);
+//		List<T> listaResultado = queryFindAll(propiedadesPrimitivas_HM, ((Table)annotationTabla).name());
+/*
+		SETEAR LA LISTA<T> donde cada T tiene seteado los atributos primitivos
+		
+		//ManyToOne -> default Eager
+		if(!listaAtributosEager.isEmpty()){
+			for(registro: lista){
+				for(atributoEager: atributosEager){
+				SELECT * FROM Usuario x WHERE x.idUsuario = ?
+					String xql = generarXQL(atributoEager.class, propiedadesFiltro[atributoEager.mappedBy])
+					registro.setAtributoEager(xpress.queryForSingleResult(registro.class, xql, registro.PK.value))
+				}
+			}
+		}
+*/
+		return null;
 	}
 
 	
-	private String queryFindAll(List<String> nombresColumnas, String claseNombre)
+	private static <T> String generarQuery(Class<T> clase, HashMap<String, String> propiedadesPrimitivas_HM) {
+		String query_string = "SELECT * FROM "+clase.getName();
+		if(propiedadesPrimitivas_HM!=null && !propiedadesPrimitivas_HM.isEmpty()){
+			query_string += " WHERE ";
+			for (Map.Entry<String, String> propiedadPrimitiva : propiedadesPrimitivas_HM.entrySet()){
+				query_string += " "+propiedadPrimitiva.getKey()+" "+propiedadPrimitiva.getValue()+" ? ";
+			}
+		}
+		return query_string;
+	}
+	
+	private static <T> List<T> query(Class<T> clase, String xql, Object args) {
+		return null;
+	}
+	private String queryFindAll(HashMap<String, String> propiedadesPrimitivas_HM, String claseNombre)
 	{
-		String nombresColumnasSeparadosComas = nombresColumnas.toString().replace("[", "").replace("]", "");
-		String query = "SELECT * FROM " + claseNombre;
-		return query;
+		
+		return null;
 	}
 
 	public static <T> T find(Class<T> dtoClass, Object id) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, SQLException{
@@ -221,5 +260,9 @@ public class XpressUTN
 		//ejecutar query. No se como hacerlo :p
 		
 		return 1;
+	}
+	
+	public static <T> T queryForSingleRow(Class<T> dtoClass,String xql,Object args){
+		return null;
 	}
 }
