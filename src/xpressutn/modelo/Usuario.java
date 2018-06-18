@@ -8,7 +8,7 @@ import xpressutn.annotations.ManyToOne;
 import xpressutn.annotations.OneToMany;
 import xpressutn.annotations.Table;
 
-@Table(name = "XPRESS.USUARIO")
+@Table(name = "USUARIO")
 public class Usuario
 {
 	@Id(strategy = Id.IDENTITY)

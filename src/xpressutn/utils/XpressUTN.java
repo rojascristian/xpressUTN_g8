@@ -119,9 +119,9 @@ public class XpressUTN
 				anotacionObtenida = atributo.getAnnotation(Column.class);
 				column.put(atributo.getName(),(((Column)anotacionObtenida).name().equals("")) ? atributo.getName() :((Column)anotacionObtenida).name());
 				query = query + column.get(atributo.getName()) + ", ";	
-				if(atributo.isAnnotationPresent(Id.class)) 
+				if(atributo.isAnnotationPresent(Id.class)){
 					pk = column.get(atributo.getName());
-				
+				}
 			}
 		}
 		query = setSelectQuery(query, dtoClass.getAnnotation(Table.class).name(), pk, id);
