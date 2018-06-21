@@ -1,46 +1,21 @@
 import java.lang.reflect.InvocationTargetException;
-import java.sql.SQLException;
 
-import xpressutn.modelo.Aplicacion;
-import xpressutn.modelo.Persona;
-import xpressutn.modelo.Rol;
 import xpressutn.modelo.Usuario;
 import xpressutn.refactor.XpressUTN;
 
 public class main
 {
 
-	public static void main(String[] args) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+	public static void main(String[] args)
 	{
-//		XpressUTN xPress = new XpressUTN();
-//		String query = xPress.findAll(Persona.class);
-//		System.out.println(query);
-//		
-//		// TODO: 1. conectar la BD para ejecutar la QUERY obtenida
-//		try
-//		{
-//			xPress.executePlainQuery(query);
-//		}
-//		catch(SQLException e)
-//		{
-//			e.printStackTrace();
-//		}
-//		
-//		try
-//		{
-//			Persona per = XpressUTN.find(Persona.class,new Integer(1));
-//			System.out.println(per.toString());
-//			Usuario usu = XpressUTN.find(Usuario.class,new Integer(1));
-//			System.out.println(usu.toString());
-//		}
-//		catch(SQLException e1)
-//		{
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
-//		
-//		// TODO: 2. nos va a devolver un array(supongo), hay que recorrer ese array e instanciar la clase correspondiente y setear los atributos
-			XpressUTN.findAll(Usuario.class);
+		//TODO: mapear el resultset a sus respectivas clases
+		//TODO: devolver un mensaje si la query no devuelve registros
+//			XpressUTN.findAll(Usuario.class);
+//			XpressUTN.find(Usuario.class,3);
+			
+//		String xql = "SELECT * FROM Usuario x WHERE x.fechaAlta > ?";
+		String xql = "SELECT * FROM Usuario x WHERE x.persona.nombre LIKE ?";
+		XpressUTN.query(Usuario.class,xql,"adf");
 	}
 
 }
