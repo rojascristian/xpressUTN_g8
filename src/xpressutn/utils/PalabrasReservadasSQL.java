@@ -9,7 +9,9 @@ public enum PalabrasReservadasSQL
     OR("or"),
     JOIN("join"),
     INNER_JOIN("inner join"),
-    AS("as");
+    AS("as"),
+    EQUALSYMBOL("="),
+	LIKE("like");
 
     private String palabra;
 

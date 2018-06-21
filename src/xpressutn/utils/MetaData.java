@@ -11,6 +11,7 @@ public class MetaData
 	private String nombreAlias;
 	private String primaryKey;
 	private List<String> primitivos;
+	private List<Field> primitivosField; 
 	/**
 	 * key: id_(primaryKey)
 	 * value: la clase
@@ -19,6 +20,7 @@ public class MetaData
 	
 	public MetaData(){
 		this.primitivos = new ArrayList<String>();
+		this.primitivosField = new ArrayList<Field>();
 		this.manyToOneColumns = new HashMap<String, Class>();
 	}
 	
@@ -63,6 +65,16 @@ public class MetaData
 	public void setPrimaryKey(String primaryKey)
 	{
 		this.primaryKey=primaryKey;
+	}
+
+	public List<Field> getPrimitivosField()
+	{
+		return primitivosField;
+	}
+
+	public void setPrimitivosField(List<Field> primitivosField)
+	{
+		this.primitivosField=primitivosField;
 	}
 
 }

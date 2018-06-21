@@ -1,5 +1,6 @@
 package xpressutn.modelo;
 
+import java.util.Date;
 import java.util.List;
 
 import xpressutn.annotations.Column;
@@ -20,6 +21,10 @@ public class Usuario
 	
 	@Column
 	private String password;
+	
+	// En el der no se muestra en USUARIO, pero en la definición de las clases del mismo documento sí.
+	@Column(name="fecha_alta")
+	private Date fechaAlta;
 	
 	@ManyToOne(columnName = "id_persona", fetchType = ManyToOne.EAGER)
 	private Persona persona;
