@@ -12,6 +12,7 @@ CREATE TABLE XPRESS.USUARIO (
 	id_usuario int not null PRIMARY KEY,
 	username varchar,
 	password varchar,
+	fecha_alta date,
 	id_persona int not null FOREIGN KEY REFERENCES XPRESS.PERSONA (id_persona)
 );
 

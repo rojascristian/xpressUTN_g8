@@ -7,10 +7,10 @@ insert into "XPRESS"."USUARIO" ("ID_USUARIO", "USERNAME", "PASSWORD", "ID_PERSON
 insert into "XPRESS"."USUARIO" ("ID_USUARIO", "USERNAME", "PASSWORD", "ID_PERSONA") values(3, 'gcast', '4321',2);
 insert into "XPRESS"."USUARIO" ("ID_USUARIO", "USERNAME", "PASSWORD", "ID_PERSONA") values(4, 'crojas', 'contrasenia',3);
 
-insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (1,1,1);
-insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (2,2,2);
-insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (3,3,3);
-
 insert into "XPRESS"."ROL" ("ID_ROL", "DESCRIPCION") values (1,'Control Total');
 insert into "XPRESS"."ROL" ("ID_ROL", "DESCRIPCION") values (2,'Gestor');
 insert into "XPRESS"."ROL" ("ID_ROL", "DESCRIPCION") values (3,'Administrador');
+
+insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (1,1,1);
+insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (2,2,2);
+insert into "XPRESS"."USUARIO_ROL" ("ID_USUARIO_ROL", "ID_USUARIO", "ID_ROL") values (3,3,3);
