@@ -1,27 +1,37 @@
 package xpressutn.utils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class MetaData
 {
+	private Class clase;
 	private String nombreTabla;
 	private String nombreAlias;
 	private String primaryKey;
+	private Field primaryKeyField;
+	private List<Method> metodos;
 	private List<String> primitivos;
-	private List<Field> primitivosField; 
+	private List<Field> primitivosField;
 	/**
 	 * key: id_(primaryKey)
 	 * value: la clase
 	 */
 	private HashMap<String, Class> manyToOneColumns;
+	private LinkedHashMap<String,Field> manyToOneColumnsField;
+	private LinkedHashMap<String, Field> oneToManyColumnsField;
 	
 	public MetaData(){
 		this.primitivos = new ArrayList<String>();
 		this.primitivosField = new ArrayList<Field>();
-		this.manyToOneColumns = new HashMap<String, Class>();
+		this.manyToOneColumns = new LinkedHashMap<String, Class>();
+		this.manyToOneColumnsField = new LinkedHashMap<String, Field>();
+		this.metodos = new ArrayList<Method>();
+		this.oneToManyColumnsField = new LinkedHashMap<String, Field>();
 	}
 	
 	public String getNombreTabla()
@@ -76,5 +86,76 @@ public class MetaData
 	{
 		this.primitivosField=primitivosField;
 	}
+	
+	public Integer numberOfFields(){
+		return primitivosField.size() + manyToOneColumns.size();
+	}
+
+	public Class getClase()
+	{
+		return clase;
+	}
+
+	public void setClase(Class clase)
+	{
+		this.clase=clase;
+	}
+
+	public List<Method> getMetodos()
+	{
+		return metodos;
+	}
+
+	public void setMetodos(List<Method> metodos)
+	{
+		this.metodos=metodos;
+	}
+
+	public Method getSetter(Field field)
+	{
+		Method md = null;
+		for(Method method: this.getMetodos()){
+			if(method.getName().equalsIgnoreCase("set"+field.getName())){
+				md = method;
+			}
+		}
+		return md;
+	}
+
+	public LinkedHashMap<String,Field> getManyToOneColumnsField()
+	{
+		return manyToOneColumnsField;
+	}
+
+	public void setManyToOneColumnsField(LinkedHashMap<String,Field> manyToOneColumnsField)
+	{
+		this.manyToOneColumnsField=manyToOneColumnsField;
+	}
+
+	public Field getJoinFieldByIndex(int index)
+	{
+		return this.manyToOneColumnsField.get((this.manyToOneColumnsField.keySet().toArray())[index]);
+	}
+
+	public LinkedHashMap<String,Field> getOneToManyColumnsField()
+	{
+		return oneToManyColumnsField;
+	}
+
+	public void setOneToManyColumnsField(LinkedHashMap<String,Field> oneToManyColumnsField)
+	{
+		this.oneToManyColumnsField=oneToManyColumnsField;
+	}
+
+	public Field getPrimaryKeyField()
+	{
+		return primaryKeyField;
+	}
+
+	public void setPrimaryKeyField(Field primaryKeyField)
+	{
+		this.primaryKeyField=primaryKeyField;
+	}
+	
 
 }

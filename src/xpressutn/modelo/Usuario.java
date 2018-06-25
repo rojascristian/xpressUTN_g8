@@ -87,7 +87,17 @@ public class Usuario
 	@Override
 	public String toString()
 	{
-		return "Usuario [idUsuario="+idUsuario+", username="+username+", password="+password+"]";
+		return "Usuario [idUsuario="+idUsuario+", username="+username+", password="+password+", fechaAlta="+fechaAlta+", persona= "+((persona!=null)?persona.toString():"null")+"]";
+	}
+
+	public Date getFechaAlta()
+	{
+		return fechaAlta;
+	}
+
+	public void setFechaAlta(Date fechaAlta)
+	{
+		this.fechaAlta=fechaAlta;
 	}
 	
 }
