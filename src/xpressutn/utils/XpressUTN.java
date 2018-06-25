@@ -25,7 +25,6 @@ import xpressutn.annotations.Id;
 import xpressutn.annotations.ManyToOne;
 import xpressutn.annotations.OneToMany;
 import xpressutn.annotations.Table;
-import xpressutn.modelo.Persona;
 
 public class XpressUTN
 {
@@ -228,12 +227,15 @@ public class XpressUTN
 	    }
 	}
 
-	public int insert(Class<?> clase) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException
+	public int insert(Object obj) 
 	{
+		Class<?> clase = obj.getClass();
 		Field[] atributos = clase.getDeclaredFields();
 		Method[] metodos = clase.getMethods();
 		String query = "INSERT INTO" + clase.getAnnotation(Table.class).name() + " ";
 		Queue<String> valores = new LinkedList<>();
+		try
+		{
 		for(Field atributo : atributos)
 		{
 			if(atributo.isAnnotationPresent(Column.class))
@@ -245,11 +247,16 @@ public class XpressUTN
 					if(getter.getName().equals("get" + atributo.getName().substring(0,1).toUpperCase() + atributo.getName().substring(1)))
 					{
 						//AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
-						valores.add(getter.invoke(clase).toString());
+						valores.add(getter.invoke(obj).toString());
 						query += (nombre.equals("") ? atributo.getName() : nombre) + ", ";
 					}
 				}
 			}
+		}
+		} 
+		catch(IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+		{
+			return 0;
 		}
 		//ELIMINO LA ULTIMA COMA
 		query = query.substring(0 , query.length() -2) + " VALUES ";
@@ -257,10 +264,19 @@ public class XpressUTN
 			query += valores.remove() + ", ";
 		query = query.substring(0 , query.length() -2) + ";";
 		
-		//ejecutar query. No se como hacerlo :p
+		try
+		{
+			executeQuery(query);
+		}
+		catch(SQLException e)
+		{
+			return 0;
+		}
 		
 		return 1;
 	}
+	
+	
 	
 	public static <T> T queryForSingleRow(Class<T> dtoClass,String xql,Object args){
 		return null;
