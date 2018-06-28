@@ -7,12 +7,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Map.Entry;
 
 import net.sf.cglib.proxy.Enhancer;
@@ -52,7 +55,7 @@ public class XpressUTN
 
 			instancia=(T)getFirst(resultSet);
 
-			instancia = createProxy(instancia, metadataEntry.getOneToManyColumnsField());
+			instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
 		}
 		catch(SQLException e)
 		{
@@ -63,7 +66,7 @@ public class XpressUTN
 		return instancia;
 	}
 
-	private static <T> T createProxy(T instancia, HashMap<String, Field> oneToManyFields)
+	private static <T> T createProxy(T instancia, HashMap<String,Field> oneToManyFields)
 	{
 		Enhancer enhancer=new Enhancer();
 		enhancer.setSuperclass(instancia.getClass());
@@ -72,31 +75,32 @@ public class XpressUTN
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
 			{
-				if(oneToManyFields.containsKey(method.getName().toLowerCase())){
-//					System.out.println(method.getName());
-					Field field = oneToManyFields.get(method.getName().toLowerCase());
-					Class clase = getClassParametized(field);
+				if(oneToManyFields.containsKey(method.getName().toLowerCase()))
+				{
+					// System.out.println(method.getName());
+					Field field=oneToManyFields.get(method.getName().toLowerCase());
+					Class clase=getClassParametized(field);
 
-					String xql = generateQuerySuperPowa(method);
-//					System.out.println(xql);
-					method.invoke(instancia, query(clase, xql, 1));
+					String xql=generateQuerySuperPowa(method);
+					// System.out.println(xql);
+					method.invoke(instancia,query(clase,xql,1));
 				}
 				return null;
 			}
 
 			private String generateQuerySuperPowa(Method method)
 			{
-				Field field = oneToManyFields.get(method.getName().toLowerCase());
-				Class clase = getClassParametized(field);
+				Field field=oneToManyFields.get(method.getName().toLowerCase());
+				Class clase=getClassParametized(field);
 				Annotation anotacionObtenida=field.getAnnotation(OneToMany.class);
-				String queryStr = "SELECT * FROM "+clase.getSimpleName()+" WHERE x."+((OneToMany)anotacionObtenida).mappedBy()+"= ?"; 
+				String queryStr="SELECT * FROM "+clase.getSimpleName()+" WHERE x."+((OneToMany)anotacionObtenida).mappedBy()+"= ?";
 				return queryStr;
 			}
 
 			private Class getClassParametized(Field field)
 			{
-			    ParameterizedType stringListType = (ParameterizedType) field.getGenericType();
-		        Class<?> stringListClass = (Class<?>) stringListType.getActualTypeArguments()[0];
+				ParameterizedType stringListType=(ParameterizedType)field.getGenericType();
+				Class<?> stringListClass=(Class<?>)stringListType.getActualTypeArguments()[0];
 				return stringListClass;
 			}
 
@@ -393,9 +397,11 @@ public class XpressUTN
 			{
 				// TODO: No me interesa, esto los manejo con cglib en momento de
 				// ejecución
-//			    ParameterizedType stringListType = (ParameterizedType) variable.getGenericType();
-//		        Class<?> stringListClass = (Class<?>) stringListType.getActualTypeArguments()[0];
-		        clase.getOneToManyColumnsField().put("get"+variable.getName().toLowerCase(), variable);
+				// ParameterizedType stringListType = (ParameterizedType)
+				// variable.getGenericType();
+				// Class<?> stringListClass = (Class<?>)
+				// stringListType.getActualTypeArguments()[0];
+				clase.getOneToManyColumnsField().put("get"+variable.getName().toLowerCase(),variable);
 			}
 		}
 
@@ -437,7 +443,7 @@ public class XpressUTN
 		String queryString=queryBase+queryCondition;
 
 		System.out.println(queryString);
-		
+
 		try
 		{
 			printQueryResult(queryString);
@@ -567,4 +573,146 @@ public class XpressUTN
 		return null;
 	}
 
+	private static int conseguirClave(Object obj)
+	{
+		Class<?> clase=obj.getClass();
+		Field[] atributos=clase.getDeclaredFields();
+		Method[] metodos=clase.getDeclaredMethods();
+		int idRegistro=-1;
+		for(Field atributo:atributos)
+		{
+			if(atributo.isAnnotationPresent(Id.class))
+			{
+				for(Method getter:metodos)
+				{
+					// BUSCO LOS GETTERS PARA TRAER LA INFORMACION
+					if(getter.getName().equals("get"+atributo.getName().substring(0,1).toUpperCase()+atributo.getName().substring(1)))
+					{
+						try
+						{
+							idRegistro=(int)getter.invoke(obj);
+						}
+						catch(IllegalAccessException|IllegalArgumentException|InvocationTargetException e)
+						{
+							return -1;
+						}
+						break;
+					}
+				}
+				if(atributo.getAnnotation(Id.class).strategy()==Id.IDENTITY)
+				{
+					// TODO
+				}
+				else
+				{
+					// TODO
+				}
+				break;
+			}
+		}
+		return idRegistro;
+	}
+
+	private static String conseguirNombreColumna(Object obj)
+	{
+		String columna=null;
+		Class<?> clase=obj.getClass();
+		Field[] atributos=clase.getDeclaredFields();
+		for(Field atributo:atributos)
+		{
+			if(atributo.isAnnotationPresent(Id.class))
+			{
+				columna=atributo.getAnnotation(Column.class).name();
+				break;
+			}
+		}
+		return columna;
+	}
+
+	// INSERT INTO table_name VALUES (value1, value2, value3, ...);
+	public int insert(Object obj)
+	{
+		Class<?> clase=obj.getClass();
+		Field[] atributos=clase.getDeclaredFields();
+		Method[] metodos=clase.getMethods();
+		String query="INSERT INTO "+clase.getAnnotation(Table.class).name()+" ";
+		List<Object> valores=new LinkedList<>();
+		int IdRegistro;
+		try
+		{
+			// Me aseguro conseguir primero el Id por consistencia
+			IdRegistro=conseguirClave(obj);
+			if(IdRegistro==-1) return 0;
+			for(Field atributo:atributos)
+			{
+				if(atributo.isAnnotationPresent(Column.class))
+				{
+					String nombre=atributo.getAnnotation(Column.class).name();
+					for(Method getter:metodos)
+					{
+						// BUSCO LOS GETTERS PARA TRAER LA INFORMACION
+						if(getter.getName().equals("get"+atributo.getName().substring(0,1).toUpperCase()+atributo.getName().substring(1)))
+						{
+							// AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS
+							// EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
+							valores.add(getter.invoke(obj));
+							query+=(nombre.equals("")?(atributo.getName().replaceAll("([A-Z])","_$1").toLowerCase()):nombre)+", ";
+							break;
+						}
+					}
+				}
+				if(atributo.isAnnotationPresent(ManyToOne.class))
+				{
+					String nombre=atributo.getAnnotation(ManyToOne.class).columnName();
+					for(Method getter:metodos)
+					{
+						if(getter.getName().equals("get"+atributo.getName().substring(0,1).toUpperCase()+atributo.getName().substring(1)))
+						{
+							Object obtenido=getter.invoke(obj);
+							valores.add(conseguirClave(obtenido));
+							if(nombre.equals(""))
+							{
+								query+=conseguirNombreColumna(obtenido)+", ";
+							}
+							else query+=nombre+", ";
+							//TODO crear registro en la otra tabla
+							break;
+						}
+					}
+				}
+				if(atributo.isAnnotationPresent(OneToMany.class))
+				{
+					
+				}
+			}
+		}
+		catch(IllegalAccessException|IllegalArgumentException|InvocationTargetException e)
+		{
+			return 0;
+		}
+		// ELIMINO LA ULTIMA COMA
+		query=query.substring(0,query.length()-2)+" VALUES (";
+		int i=0;
+		for(;i<valores.size();i++)
+			query+="?,";
+		query=query.substring(0,query.length()-1)+");";
+
+		try
+		{
+			PreparedStatement s=conexion.prepareStatement(query);
+			i = 1;
+			for(Object valor:valores)
+			{
+				s.setObject(i,valor);
+				i++;
+			}
+			s.execute();
+		}
+		catch(SQLException e)
+		{
+			return 0;
+		}
+
+		return 1;
+	}
 }
