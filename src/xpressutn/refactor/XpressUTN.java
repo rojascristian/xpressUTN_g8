@@ -613,10 +613,9 @@ public class XpressUTN
 		return idRegistro;
 	}
 
-	private static String conseguirNombreColumna(Object obj)
+	private static String conseguirNombreColumndaId(Class<?> clase)
 	{
 		String columna=null;
-		Class<?> clase=obj.getClass();
 		Field[] atributos=clase.getDeclaredFields();
 		for(Field atributo:atributos)
 		{
@@ -627,6 +626,24 @@ public class XpressUTN
 			}
 		}
 		return columna;
+	}
+	
+	private static String conseguirNombreColumnaID(Object obj)
+	{
+		Class<?> clase=obj.getClass();
+		return conseguirNombreColumnaID(clase);
+	}
+
+	private static Method conseguirMetodo(String nombreVar, Method[] metodos)
+	{
+		for(Method getter:metodos)
+		{
+			if(getter.getName().equals("get"+nombreVar.substring(0,1).toUpperCase()+nombreVar.substring(1)))
+			{
+				return getter;
+			}
+		}
+		return null;
 	}
 
 	// INSERT INTO table_name VALUES (value1, value2, value3, ...);
@@ -645,44 +662,36 @@ public class XpressUTN
 			if(IdRegistro==-1) return 0;
 			for(Field atributo:atributos)
 			{
+				Method getter;
 				if(atributo.isAnnotationPresent(Column.class))
 				{
 					String nombre=atributo.getAnnotation(Column.class).name();
-					for(Method getter:metodos)
-					{
-						// BUSCO LOS GETTERS PARA TRAER LA INFORMACION
-						if(getter.getName().equals("get"+atributo.getName().substring(0,1).toUpperCase()+atributo.getName().substring(1)))
-						{
-							// AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS
-							// EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
-							valores.add(getter.invoke(obj));
-							query+=(nombre.equals("")?(atributo.getName().replaceAll("([A-Z])","_$1").toLowerCase()):nombre)+", ";
-							break;
-						}
-					}
+					getter=conseguirMetodo(atributo.getName(),metodos);
+					// BUSCO LOS GETTERS PARA TRAER LA INFORMACION
+					// AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS
+					// EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
+					valores.add(getter.invoke(obj));
+					query+=(nombre.equals("")?(atributo.getName().replaceAll("([A-Z])","_$1").toLowerCase()):nombre)+", ";
+					break;
 				}
 				if(atributo.isAnnotationPresent(ManyToOne.class))
 				{
 					String nombre=atributo.getAnnotation(ManyToOne.class).columnName();
-					for(Method getter:metodos)
-					{
-						if(getter.getName().equals("get"+atributo.getName().substring(0,1).toUpperCase()+atributo.getName().substring(1)))
-						{
-							Object obtenido=getter.invoke(obj);
-							valores.add(conseguirClave(obtenido));
-							if(nombre.equals(""))
-							{
-								query+=conseguirNombreColumna(obtenido)+", ";
-							}
-							else query+=nombre+", ";
-							//TODO crear registro en la otra tabla
-							break;
-						}
-					}
+					getter=conseguirMetodo(atributo.getName(),metodos);
+					Object obtenido=getter.invoke(obj);
+					valores.add(conseguirClave(obtenido));
+					if(nombre.equals("")) query+=conseguirNombreColumnaID(obtenido)+", ";
+					else query+=nombre+", ";
+					break;
 				}
 				if(atributo.isAnnotationPresent(OneToMany.class))
 				{
-					
+					getter=conseguirMetodo(atributo.getName(),metodos);
+					List<?> lista=(List<?>)getter.invoke(obj);
+					for(Object nodo:lista)
+					{
+						if(insert(nodo)==0) return 0;
+					}
 				}
 			}
 		}
@@ -693,14 +702,14 @@ public class XpressUTN
 		// ELIMINO LA ULTIMA COMA
 		query=query.substring(0,query.length()-2)+" VALUES (";
 		int i=0;
-		for(;i<valores.size();i++)
+		for(; i<valores.size(); i++)
 			query+="?,";
 		query=query.substring(0,query.length()-1)+");";
 
 		try
 		{
 			PreparedStatement s=conexion.prepareStatement(query);
-			i = 1;
+			i=1;
 			for(Object valor:valores)
 			{
 				s.setObject(i,valor);
@@ -714,5 +723,60 @@ public class XpressUTN
 		}
 
 		return 1;
+	}
+
+	// UPDATE table_name SET column1 = value1, column2 = value2, ... WHERE condition;
+	public int update(Object obj)
+	{
+		int clave=conseguirClave(obj);
+		Class<?> clase=obj.getClass();
+		Object mismo=find(clase,clave);
+		Field[] atributos=clase.getDeclaredFields();
+		Method[] metodos=clase.getDeclaredMethods();
+		String query = "UPDATE "+clase.getAnnotation(Table.class).name()+ " SET ";
+		try
+		{
+			for(Field atributo:atributos)
+			{
+				if(atributo.isAnnotationPresent(Column.class)/*||atributo.isAnnotationPresent(OneToMany.class) || atributo.isAnnotationPresent(ManyToOne.class)||*/)
+				{
+					String nombre=atributo.getName();
+					Method conseguido=conseguirMetodo(nombre,metodos);
+					if(conseguido.invoke(obj)!=conseguido.invoke(mismo))
+					{
+						query+=(nombre.equals("")?(atributo.getName().replaceAll("([A-Z])","_$1").toLowerCase()):nombre)+" = " + conseguido.invoke(obj).toString()+", " ;
+					}
+				}
+			}
+		}
+		catch(Exception x)
+		{
+			return 0;
+		}
+		query = query.substring(0, query.length()-2);
+		query+= " WHERE "+conseguirNombreColumnaID(obj)+" = "+Integer.toString(clave);
+		try
+		{
+			return conexion.createStatement().executeUpdate(query);
+		}
+		catch(SQLException e)
+		{
+			return 0;
+		}
+	}
+	
+	//DELETE FROM table_name WHERE condition;
+	public int delete(Class<?> claseDto, int ID)
+	{
+		String query = "DELETE FROM "+claseDto.getAnnotation(Table.class).name()+" WHERE ";
+		query += conseguirNombreColumnaID(claseDto)+" = "+Integer.toString(ID);
+		try
+		{
+			return conexion.createStatement().executeUpdate(query);
+		}
+		catch(SQLException e)
+		{
+			return 0;
+		}
 	}
 }
