@@ -1,6 +1,6 @@
-insert into "XPRESS"."PERSONA" ("ID_PERSONA", "NOMBRE", "DIRECCION", "FECHA_ALTA") values(1, 'nico', 'nico@gmail.com', '2018-04-16');
+insert into "XPRESS"."PERSONA" ("NOMBRE", "DIRECCION", "FECHA_ALTA") values('nico', 'nico@gmail.com', '2018-04-16');
 insert into "XPRESS"."PERSONA" ("ID_PERSONA", "NOMBRE", "DIRECCION", "FECHA_ALTA") values(2, 'gaston', 'g_cast@gmail.com', '2018-03-05');
-insert into "XPRESS"."PERSONA" ("ID_PERSONA", "NOMBRE", "DIRECCION", "FECHA_ALTA") values(3, 'cris', 'cris-rojas@yahoo.com', '2017-11-03');
+insert into "XPRESS"."PERSONA" ("ID_PERSONA", "NOMBRE", "DIRECCION", "FECHA_ALTA") values(4, 'cris', 'cris-rojas@yahoo.com', '2017-11-03');
 
 insert into "XPRESS"."USUARIO" ("ID_USUARIO", "USERNAME", "PASSWORD", "ID_PERSONA") values(1, 'nikodmb', '1234',1);
 insert into "XPRESS"."USUARIO" ("ID_USUARIO", "USERNAME", "PASSWORD", "ID_PERSONA") values(2, 'sa', 'ayed2018',1);

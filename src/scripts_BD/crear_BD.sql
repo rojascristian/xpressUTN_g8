@@ -1,24 +1,23 @@
 CREATE SCHEMA XPRESS AUTHORIZATION sa 
 
 CREATE TABLE XPRESS.PERSONA (
-    id_persona int not null,
-    nombre varchar,
-    direccion varchar,
+    id_persona integer identity primary key,
+    nombre varchar(30),
+    direccion varchar(50),
     fecha_alta date,
-    PRIMARY KEY (id_persona)
 );
 
 CREATE TABLE XPRESS.USUARIO (
-	id_usuario int not null PRIMARY KEY,
-	username varchar,
-	password varchar,
+	id_usuario integer identity PRIMARY KEY,
+	username varchar(30),
+	password varchar(30),
 	fecha_alta date,
-	id_persona int not null FOREIGN KEY REFERENCES XPRESS.PERSONA (id_persona)
+	id_persona integer FOREIGN KEY REFERENCES XPRESS.PERSONA (id_persona)
 );
 
 CREATE TABLE XPRESS.ROL(
 	id_rol int not null PRIMARY KEY,
-	descripcion varchar
+	descripcion varchar(30)
 );
 
 CREATE TABLE XPRESS.USUARIO_ROL ( 
