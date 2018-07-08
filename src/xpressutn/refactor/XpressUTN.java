@@ -55,7 +55,7 @@ public class XpressUTN
 
 			instancia=(T)getFirst(resultSet);
 
-			instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
+//			instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
 		}
 		catch(SQLException e)
 		{
@@ -347,6 +347,7 @@ public class XpressUTN
 
 	private static <T> void setMetaDataHM(HashMap<String,MetaData> metadataHM, Class<T> dtoClass)
 	{
+		System.out.println(dtoClass);
 		MetaData clase=new MetaData();
 		String tableName=dtoClass.getAnnotation(Table.class).name();
 		clase.setNombreTabla(formatNombreTabla(tableName));
@@ -389,9 +390,11 @@ public class XpressUTN
 			if(variable.isAnnotationPresent(ManyToOne.class))
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
-				String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
-				clase.getManyToOneColumns().put(key,variable.getType());
-				clase.getManyToOneColumnsField().put(key,variable);
+				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.EAGER){
+					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+					clase.getManyToOneColumns().put(key,variable.getType());
+					clase.getManyToOneColumnsField().put(key,variable);					
+				}
 			}
 			if(variable.isAnnotationPresent(OneToMany.class))
 			{
