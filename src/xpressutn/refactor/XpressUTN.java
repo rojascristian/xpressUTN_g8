@@ -17,8 +17,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.InvocationHandler;
+import net.sf.cglib.proxy.MethodInterceptor;
 import xpressutn.annotations.Column;
 import xpressutn.annotations.Id;
 import xpressutn.annotations.ManyToOne;
@@ -52,7 +54,8 @@ public class XpressUTN
 
 			instancia=(T)getFirst(resultSet);
 
-			// instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
+//			 instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
+			 instancia=createProxyRefactor(instancia,metadataEntry.getOneToManyColumnsField());
 		}
 		catch(SQLException e)
 		{
@@ -61,6 +64,18 @@ public class XpressUTN
 		}
 		// System.out.println(instancia);
 		return instancia;
+	}
+
+	private static <T> T createProxyRefactor(T instancia, LinkedHashMap<String,Field> oneToManyColumnsField)
+	{
+		T object = (T)Enhancer.create(instancia.getClass(),getMethodInterceptor(instancia, oneToManyColumnsField));	
+		return object;
+	}
+
+	private static MethodInterceptor getMethodInterceptor(Object instancia, LinkedHashMap<String,Field> oneToManyColumnsField)
+	{
+		// TODO Auto-generated method stub
+		return new Interceptor(instancia, oneToManyColumnsField);
 	}
 
 	private static <T> T createProxy(T instancia, HashMap<String,Field> oneToManyFields)
@@ -387,7 +402,8 @@ public class XpressUTN
 			if(variable.isAnnotationPresent(ManyToOne.class))
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
-				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.EAGER)
+				// TODO: tratar diferenciado los lazy/eager
+				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY)
 				{
 					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
 					clase.getManyToOneColumns().put(key,variable.getType());
@@ -396,12 +412,6 @@ public class XpressUTN
 			}
 			if(variable.isAnnotationPresent(OneToMany.class))
 			{
-				// TODO: No me interesa, esto los manejo con cglib en momento de
-				// ejecución
-				// ParameterizedType stringListType = (ParameterizedType)
-				// variable.getGenericType();
-				// Class<?> stringListClass = (Class<?>)
-				// stringListType.getActualTypeArguments()[0];
 				clase.getOneToManyColumnsField().put("get"+variable.getName().toLowerCase(),variable);
 			}
 		}
