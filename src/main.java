@@ -1,22 +1,60 @@
 import java.lang.reflect.InvocationTargetException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.List;
 
-import xpressutn.modelo.*;
-import xpressutn.refactor.XpressUTN;
+import iceblock.*;
+import iceblock.connection.ConnectionManager;
+import models.*;
 
-public class main
-{
-
-	public static void main(String[] args)
-	{
-		//TODO: mapear el resultset a sus respectivas clases
-		//TODO: devolver un mensaje si la query no devuelve registros
-//			XpressUTN.findAll(Persona.class);
-			Usuario u = XpressUTN.find(Usuario.class,3);
-			u.getRoles();
-			
-//		String xql = "SELECT * FROM Usuario x WHERE x.fechaAlta > ?";
-//		String xql = "SELECT * FROM Usuario x WHERE x.persona.nombre LIKE ?";
-//		XpressUTN.query(Usuario.class,xql,"'%s%'");
+public class Main {
+	
+	public static void main(String[] args) throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException{
+	
+		// Connect to DB
+		ConnectionManager.create("org.hsqldb.jdbcDriver","jdbc:hsqldb:hsql://localhost/","sa","","hsqldb");
+		ConnectionManager.changeConnection("hsqldb");
+		Connection conn = ConnectionManager.getConnection();
+		
+		/*
+		Person p = IBlock.find(conn, Person.class, 2);
+		System.out.println("Nombre:" + p.getName());
+		List<Occupation> occup = p.getOccupations();
+		
+		System.out.println("Objetos encontrados: " + occup.size());
+		for(Occupation oa : occup) {
+			System.out.println(oa.getDescription() + " - " + oa.getIdOccupation());
+		}
+		
+		Occupation o = IBlock.find(conn, Occupation.class, 4);
+		List<Person> pers = o.getPersons();
+		System.out.println("Objetos encontrados: " + pers.size());
+		
+		for(Person pa : pers) {
+			System.out.println(pa.getName());
+		}
+		*/
+		
+		Address asd = new Address();
+		asd.setIdAddress(3);
+		asd.setStreet("ejemplo");
+		asd.setNumber(0);
+		Person p = new Person();
+		
+		p.setName("xd");
+		p.setIdPerson(28);
+		p.setAge(5);
+		p.setAddress(asd);
+		p.setWeigth(50.5);
+		
+		IBlock.insert(conn, Person.class, p);
+		
+		/*Person p = IBlock.find(conn, Person.class, 7);
+		System.out.println(IBlock.insert(conn,Person.class,p));		
+		IBlock.insert(conn,Person.class,p);*/
+		
+		//System.out.println(IBlock.delete(conn, Person.class, "person.id_person = 18 or person.id_person=19"));
+		
 	}
-
+	
 }
