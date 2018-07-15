@@ -55,8 +55,7 @@ public class XpressUTN
 
 			instancia=(T)getFirst(resultSet);
 
-//			 instancia=createProxy(instancia,metadataEntry.getOneToManyColumnsField());
-			 instancia=createProxyRefactor(instancia,metadataEntry.getOneToManyColumnsField());
+			 instancia=createProxyRefactor(instancia,metadataEntry.getLazyFields());
 		}
 		catch(SQLException e)
 		{
@@ -376,16 +375,18 @@ public class XpressUTN
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
 				// TODO: tratar diferenciado los lazy/eager
-				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY)
-				{
-					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
-					clase.getManyToOneColumns().put(key,variable.getType());
-					clase.getManyToOneColumnsField().put(key,variable);
+				String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+				clase.getManyToOneColumns().put(key,variable.getType());
+				clase.getManyToOneColumnsField().put(key,variable);
+				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY){
+					// de clave debería poner el getter
+					clase.getLazyFields().put(key, variable);
 				}
 			}
 			if(variable.isAnnotationPresent(OneToMany.class))
 			{
 				clase.getOneToManyColumnsField().put("get"+variable.getName().toLowerCase(),variable);
+				clase.getLazyFields().put("get"+variable.getName().toLowerCase(),variable);
 			}
 		}
 
@@ -426,7 +427,8 @@ public class XpressUTN
 		String queryCondition=" WHERE "+buildConditionSQL(metadataEntry,query,args);
 		String queryString=queryBase+queryCondition;
 
-		System.out.println(queryString);
+		System.out.println("QUERY SQL GENERADA MEDIANTE EL MÉTODO QUERY QUE EJECUTA EL MOTOR DE BD");
+		System.out.println(queryString+"\n");
 
 		try
 		{

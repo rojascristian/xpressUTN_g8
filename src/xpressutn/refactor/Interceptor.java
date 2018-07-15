@@ -26,13 +26,14 @@ public class Interceptor implements MethodInterceptor
 	{
 		if(this.oneToManyColumnsField.containsKey(method.getName().toLowerCase()))
 		{
+			System.out.println("método del proxy.\n");
 			Field field=this.oneToManyColumnsField.get(method.getName().toLowerCase());
 			Class clase=getClassParametized(field);
 
 			String xql=generateQuerySuperPowa(method);
-			System.out.println(xql);
+			System.out.println("PSEUDO QUERY GENERADA QUE SE LE PASA AL MÉTODO QUERY DE XPRESS");
+			System.out.println(xql+"\n");
 			method.invoke(obj,XpressUTN.query(clase,xql,1));
-			System.out.println("método del proxy.");
 			return null;
 		}
 		System.out.println("método de la clase.");
@@ -44,7 +45,7 @@ public class Interceptor implements MethodInterceptor
 		Field field=this.oneToManyColumnsField.get(method.getName().toLowerCase());
 		Class clase=getClassParametized(field);
 		Annotation anotacionObtenida=field.getAnnotation(OneToMany.class);
-		String queryStr="SELECT * FROM "+clase.getSimpleName()+" WHERE x."+((OneToMany)anotacionObtenida).mappedBy()+"= ?";
+		String queryStr="SELECT * FROM "+clase.getSimpleName()+" x WHERE x."+((OneToMany)anotacionObtenida).mappedBy()+" = ?";
 		return queryStr;
 	}
 
