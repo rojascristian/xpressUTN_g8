@@ -17,9 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
-import net.sf.cglib.proxy.InvocationHandler;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
 import xpressutn.annotations.Column;
@@ -34,12 +32,13 @@ import xpressutn.utils.PalabrasReservadasSQL;
 public class XpressUTN
 {
 	private static Connection conexion=ConexionBD.getConnection();
-	private static HashMap metadataHM=new LinkedHashMap<String,MetaData>();
+//	private static HashMap metadataHM=new LinkedHashMap<String,MetaData>();
 
 	public static <T> T find(Class<T> dtoClass, Object id)
 	{
 		// HashMap<String, MetaData> metadataHM = new
 		// LinkedHashMap<String,MetaData>();
+		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
 		T instancia=null;
 		metadataHM.clear();
 		setMetaDataHM(metadataHM,dtoClass);
@@ -49,33 +48,31 @@ public class XpressUTN
 		String queryStr=queryFindAll(metadataHM);
 		String queryWhereId=generateConditionPK(metadataEntry,(Integer)id);
 		String query=queryStr+queryWhereId;
+		System.out.println(query);
 		try
 		{
 			ResultSet resultSet=printQueryResult(query);
-
-			instancia=(T)getFirst(resultSet);
-
-			 instancia=createProxyRefactor(instancia,metadataEntry.getLazyFields());
+			instancia=(T)getFirst(resultSet, metadataHM);
+			instancia=createProxyRefactor(instancia,metadataEntry);
 		}
 		catch(SQLException e)
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		// System.out.println(instancia);
 		return instancia;
 	}
 
-	private static <T> T createProxyRefactor(T instancia, LinkedHashMap<String,Field> oneToManyColumnsField)
+	private static <T> T createProxyRefactor(T instancia, MetaData metadataEntry)
 	{
-		T object = (T)Enhancer.create(instancia.getClass(),getMethodInterceptor(instancia, oneToManyColumnsField));	
+		T object = (T)Enhancer.create(instancia.getClass(),getMethodInterceptor(instancia, metadataEntry));	
 		return object;
 	}
 
-	private static MethodInterceptor getMethodInterceptor(Object instancia, LinkedHashMap<String,Field> oneToManyColumnsField)
+	private static MethodInterceptor getMethodInterceptor(Object instancia, MetaData metadataEntry)
 	{
 		// TODO Auto-generated method stub
-		return new Interceptor(instancia, oneToManyColumnsField);
+		return new Interceptor(instancia, metadataEntry);
 	}
 
 	private static <T> T createProxy(T instancia, HashMap<String,Field> oneToManyFields)
@@ -121,13 +118,14 @@ public class XpressUTN
 		{
 			// HashMap<String, MetaData> metadataHM = new
 			// LinkedHashMap<String,MetaData>();
-			metadataHM.clear();
+//			metadataHM.clear();
+			LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
 			setMetaDataHM(metadataHM,dtoClass);
 
 			String queryStr=queryFindAll(metadataHM);
 			ResultSet resultSet=printQueryResult(queryStr);
 
-			resultSetObject=getAllResults(resultSet);
+			resultSetObject=getAllResults(resultSet, metadataHM);
 		}
 		catch(Exception e)
 		{
@@ -136,14 +134,16 @@ public class XpressUTN
 		return resultSetObject;
 	}
 
-	private static List getAllResults(ResultSet resultSet)
+	private static List getAllResults(ResultSet resultSet, LinkedHashMap<String,MetaData> metadataHM)
 	{
-		return transformResultSetToObjectList(resultSet);
+//		return transformResultSetToObjectList(resultSet);
+		return transformResultSetToObjectList(resultSet, metadataHM);
 	}
 
-	private static Object getFirst(ResultSet resultSet) throws SQLException
+	private static Object getFirst(ResultSet resultSet, LinkedHashMap<String,MetaData> metadataHM) throws SQLException
 	{
-		List resultSetList=transformResultSetToObjectList(resultSet);
+//		List resultSetList=transformResultSetToObjectList(resultSet);
+		List resultSetList=transformResultSetToObjectList(resultSet, metadataHM);
 		return resultSetList.get(0);
 	}
 
@@ -153,46 +153,46 @@ public class XpressUTN
 		return resultSetList.get(0);
 	}
 
-	private static List transformResultSetToObjectList(ResultSet resultSet, HashMap<String,MetaData> metaDataLocalHM)
-	{
-		Object instancia=null;
-		MetaData md=null;
-		List resultados=new ArrayList();
-		int i=0;
-		for(Entry<String,MetaData> entry:metaDataLocalHM.entrySet())
-		{
-			md=entry.getValue();
-			try
-			{
-				while(resultSet.next())
-				{
-					instancia=getInstance(md.getClase());
-					for(int index=1; index<=md.getPrimitivosField().size()+md.getManyToOneColumns().size(); index++)
-					{
-						if(index<=md.getPrimitivosField().size())
-						{
-							Method metodo=md.getSetter(md.getPrimitivosField().get(index-1));
-							metodo.invoke(instancia,resultSet.getObject(index));
-						}
-						else
-						{
-							Field fd=md.getJoinFieldByIndex(index-md.getPrimitivosField().size()-1);
-							Method metodo=md.getSetter(fd);
-							metodo.invoke(instancia,findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index)));
-						}
-					}
-					resultados.add(instancia);
-				}
-			}
-			catch(Exception e)
-			{
-				e.printStackTrace();
-			}
-		}
-		return resultados;
-	}
+//	private static List transformResultSetToObjectList(ResultSet resultSet, HashMap<String,MetaData> metaDataLocalHM)
+//	{
+//		Object instancia=null;
+//		MetaData md=null;
+//		List resultados=new ArrayList();
+//		int i=0;
+//		for(Entry<String,MetaData> entry:metaDataLocalHM.entrySet())
+//		{
+//			md=entry.getValue();
+//			try
+//			{
+//				while(resultSet.next())
+//				{
+//					instancia=getInstance(md.getClase());
+//					for(int index=1; index<=md.getPrimitivosField().size()+md.getManyToOneColumns().size(); index++)
+//					{
+//						if(index<=md.getPrimitivosField().size())
+//						{
+//							Method metodo=md.getSetter(md.getPrimitivosField().get(index-1));
+//							metodo.invoke(instancia,resultSet.getObject(index));
+//						}
+//						else
+//						{
+//							Field fd=md.getJoinFieldByIndex(index-md.getPrimitivosField().size()-1);
+//							Method metodo=md.getSetter(fd);
+//							metodo.invoke(instancia,findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index)));
+//						}
+//					}
+//					resultados.add(instancia);
+//				}
+//			}
+//			catch(Exception e)
+//			{
+//				e.printStackTrace();
+//			}
+//		}
+//		return resultados;
+//	}
 
-	private static List transformResultSetToObjectList(ResultSet resultSet)
+	private static List transformResultSetToObjectList(ResultSet resultSet, HashMap<String,MetaData> metadataHM)
 	{
 		Object instancia=null;
 		MetaData md=null;
@@ -332,6 +332,7 @@ public class XpressUTN
 
 	private static <T> void setMetaDataHM(HashMap<String,MetaData> metadataHM, Class<T> dtoClass)
 	{
+		System.out.println(dtoClass.getName());
 		MetaData clase=new MetaData();
 		String tableName=dtoClass.getAnnotation(Table.class).name();
 		clase.setNombreTabla(formatNombreTabla(tableName));
@@ -418,13 +419,15 @@ public class XpressUTN
 	// query = SELECT * FROM Usuario x WHERE x.persona.nombre LIKE ?
 	public static <T> List<T> query(Class<T> dtoClass, String query, Object args)
 	{
-		metadataHM.clear();
+		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
+//		metadataHM.clear();
 		setMetaDataHM(metadataHM,dtoClass);
+		List resultSetObject = null;
 
-		MetaData metadataEntry=getEntryMetadataHM(dtoClass);
+		MetaData metadataEntry=getEntryMetadataHM(dtoClass,metadataHM);
 
 		String queryBase=queryFindAll(metadataHM);
-		String queryCondition=" WHERE "+buildConditionSQL(metadataEntry,query,args);
+		String queryCondition=" WHERE "+buildConditionSQL(metadataHM, metadataEntry,query,args);
 		String queryString=queryBase+queryCondition;
 
 		System.out.println("QUERY SQL GENERADA MEDIANTE EL MÉTODO QUERY QUE EJECUTA EL MOTOR DE BD");
@@ -432,7 +435,8 @@ public class XpressUTN
 
 		try
 		{
-			printQueryResult(queryString);
+			ResultSet resultSet = printQueryResult(queryString);
+			resultSetObject = getAllResults(resultSet, metadataHM);
 		}
 		catch(SQLException e)
 		{
@@ -440,22 +444,22 @@ public class XpressUTN
 			e.printStackTrace();
 		}
 
-		return null;
+		return resultSetObject;
 	}
 
-	private static <T> MetaData getEntryMetadataHM(Class<T> dtoClass)
+	private static <T> MetaData getEntryMetadataHM(Class<T> dtoClass, HashMap<String,MetaData> metadataHM)
 	{
 		String tableName=dtoClass.getAnnotation(Table.class).name();
 		return (MetaData)metadataHM.get(formatNombreTabla(tableName));
 	}
 
-	private static <T> String buildConditionSQL(MetaData metadata, String query, Object valor)
+	private static <T> String buildConditionSQL(HashMap<String,MetaData> metadataHM, MetaData metadata, String query, Object valor)
 	{
 		String cadenaPropiedades=getCadenaPropiedades(query);
 		List<String> joins=new ArrayList<String>();
 		List<String> cadenaAliasPuntoPropiedad=new ArrayList<String>();
 		String nombrePropiedad=separarCadenaPropiedades(joins,cadenaPropiedades);
-		generarCadenaPropiedades(metadata,joins,nombrePropiedad,cadenaAliasPuntoPropiedad);
+		generarCadenaPropiedades(metadataHM, metadata,joins,nombrePropiedad,cadenaAliasPuntoPropiedad);
 		cadenaAliasPuntoPropiedad.remove(0);
 		String cadenaStr=String.join(".",cadenaAliasPuntoPropiedad);
 		String operador=getOperadorQueryStr(query);
@@ -470,7 +474,7 @@ public class XpressUTN
 		return operador;
 	}
 
-	private static void generarCadenaPropiedades(MetaData metadata, List<String> joins, String nombrePropiedad, List<String> cadenaAliasPuntoPropiedad)
+	private static void generarCadenaPropiedades(HashMap<String, MetaData> metadataHM, MetaData metadata, List<String> joins, String nombrePropiedad, List<String> cadenaAliasPuntoPropiedad)
 	{
 		// TODO Auto-generated method stub
 		cadenaAliasPuntoPropiedad.add(metadata.getNombreAlias());
@@ -480,7 +484,7 @@ public class XpressUTN
 			if(claseStr!=null)
 			{
 				Class claseObjeto=metadata.getManyToOneColumns().get("id_"+claseStr);
-				generarCadenaPropiedades(getEntryMetadataHM(claseObjeto),joins,nombrePropiedad,cadenaAliasPuntoPropiedad);
+				generarCadenaPropiedades(metadataHM, getEntryMetadataHM(claseObjeto, metadataHM),joins,nombrePropiedad,cadenaAliasPuntoPropiedad);
 			}
 		}
 		else
@@ -548,13 +552,14 @@ public class XpressUTN
 	{
 		// HashMap<String, MetaData> metadataHM = new
 		// LinkedHashMap<String,MetaData>();
-		metadataHM.clear();
+//		metadataHM.clear();
+		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
 		setMetaDataHM(metadataHM,dtoClass);
 
-		MetaData metadataEntry=getEntryMetadataHM(dtoClass);
+		MetaData metadataEntry=getEntryMetadataHM(dtoClass,metadataHM);
 
 		String queryBase=queryFindAll(metadataHM);
-		String queryCondition=" WHERE "+buildConditionSQL(metadataEntry,query,args);
+		String queryCondition=" WHERE "+buildConditionSQL(metadataHM, metadataEntry,query,args);
 		String queryString=queryBase+queryCondition;
 		return null;
 	}
