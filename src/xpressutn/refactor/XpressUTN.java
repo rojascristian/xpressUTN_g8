@@ -21,6 +21,7 @@ import net.sf.cglib.proxy.Callback;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.InvocationHandler;
 import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
 import xpressutn.annotations.Column;
 import xpressutn.annotations.Id;
 import xpressutn.annotations.ManyToOne;
@@ -82,41 +83,14 @@ public class XpressUTN
 	{
 		Enhancer enhancer=new Enhancer();
 		enhancer.setSuperclass(instancia.getClass());
-		enhancer.setCallback(new InvocationHandler()
-		{
-			@Override
-			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
-			{
-				if(oneToManyFields.containsKey(method.getName().toLowerCase()))
-				{
-					// System.out.println(method.getName());
-					Field field=oneToManyFields.get(method.getName().toLowerCase());
-					Class clase=getClassParametized(field);
-
-					String xql=generateQuerySuperPowa(method);
-					// System.out.println(xql);
-					method.invoke(instancia,query(clase,xql,1));
-				}
-				return null;
-			}
-
-			private String generateQuerySuperPowa(Method method)
-			{
-				Field field=oneToManyFields.get(method.getName().toLowerCase());
-				Class clase=getClassParametized(field);
-				Annotation anotacionObtenida=field.getAnnotation(OneToMany.class);
-				String queryStr="SELECT * FROM "+clase.getSimpleName()+" WHERE x."+((OneToMany)anotacionObtenida).mappedBy()+"= ?";
-				return queryStr;
-			}
-
-			private Class getClassParametized(Field field)
-			{
-				ParameterizedType stringListType=(ParameterizedType)field.getGenericType();
-				Class<?> stringListClass=(Class<?>)stringListType.getActualTypeArguments()[0];
-				return stringListClass;
-			}
-
-		});
+		enhancer.setCallback(new MethodInterceptor() {
+		    @Override
+		    public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy)
+		        throws Throwable {
+		    	System.out.println("proxy signature: "+proxy.getSignature());
+		        return proxy.invokeSuper(obj, args);
+		    }
+		  });
 		return (T)enhancer.create();
 	}
 
@@ -359,7 +333,6 @@ public class XpressUTN
 
 	private static <T> void setMetaDataHM(HashMap<String,MetaData> metadataHM, Class<T> dtoClass)
 	{
-		System.out.println(dtoClass);
 		MetaData clase=new MetaData();
 		String tableName=dtoClass.getAnnotation(Table.class).name();
 		clase.setNombreTabla(formatNombreTabla(tableName));
