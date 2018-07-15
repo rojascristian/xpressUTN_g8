@@ -29,7 +29,7 @@ public class Usuario
 	@ManyToOne(columnName = "id_persona", fetchType = ManyToOne.EAGER)
 	private Persona persona;
 	
-	@OneToMany(mappedBy = "usuario")
+	@OneToMany(mappedBy="usuario")
 	private List<UsuarioRol> roles;
 	
 	public Usuario (){}

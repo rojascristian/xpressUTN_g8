@@ -14,6 +14,12 @@ public class Rol
 	@Column(name = "id_rol")
 	private int idRol;
 	
+	@Column
+	private String descripcion;
+	
+	@OneToMany(mappedBy = "id_rol")
+	private List<UsuarioRol> roles;
+	
 	public int getIdRol()
 	{
 		return idRol;
@@ -33,12 +39,6 @@ public class Rol
 	{
 		this.descripcion=descripcion;
 	}
-
-	@Column
-	private String descripcion;
-	
-	@OneToMany(mappedBy = "rol")
-	private List<UsuarioRol> roles;
 		
 	public Rol(){}
 }

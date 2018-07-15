@@ -11,10 +11,10 @@ public class UsuarioRol
 	@Column(name = "id_usuario_rol")
 	private int idUsuarioRol;
 	
-	@ManyToOne
+	@ManyToOne(columnName="id_usuario")
 	private Usuario usuario;
 	
-	@ManyToOne
+	@ManyToOne(columnName="id_rol")
 	private Rol rol;
 	
 	public UsuarioRol(){}
