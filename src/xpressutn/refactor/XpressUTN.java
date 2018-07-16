@@ -45,15 +45,12 @@ public class XpressUTN
 
 		MetaData metadataEntry=getMetaDataHMByClass(metadataHM,dtoClass);
 
-		String queryStr=queryFindAll(metadataHM);
-		String queryWhereId=generateConditionPK(metadataEntry,(Integer)id);
-		String query=queryStr+queryWhereId;
-		System.out.println(query);
+		String query=generateExplicitQuery(id,metadataHM,metadataEntry);
 		try
 		{
 			ResultSet resultSet=printQueryResult(query);
 			instancia=(T)getFirst(resultSet, metadataHM);
-			instancia=createProxyRefactor(instancia,metadataEntry);
+			instancia=createProxyRefactor(instancia, metadataEntry, metadataHM);
 		}
 		catch(SQLException e)
 		{
@@ -63,31 +60,24 @@ public class XpressUTN
 		return instancia;
 	}
 
-	private static <T> T createProxyRefactor(T instancia, MetaData metadataEntry)
+	public static String generateExplicitQuery(Object id, LinkedHashMap<String,MetaData> metadataHM, MetaData metadataEntry)
 	{
-		T object = (T)Enhancer.create(instancia.getClass(),getMethodInterceptor(instancia, metadataEntry));	
+		String queryStr=queryFindAll(metadataHM);
+		String queryWhereId=generateConditionPK(metadataEntry,(Integer)id);
+		String query=queryStr+queryWhereId;
+		return query;
+	}
+
+	private static <T> T createProxyRefactor(T instancia, MetaData metadataEntry, LinkedHashMap<String, MetaData> metadataHM)
+	{
+		T object = (T)Enhancer.create(instancia.getClass(),getMethodInterceptor(instancia, metadataEntry, metadataHM));	
 		return object;
 	}
 
-	private static MethodInterceptor getMethodInterceptor(Object instancia, MetaData metadataEntry)
+	private static MethodInterceptor getMethodInterceptor(Object instancia, MetaData metadataEntry, LinkedHashMap<String,MetaData> metadataHM)
 	{
 		// TODO Auto-generated method stub
-		return new Interceptor(instancia, metadataEntry);
-	}
-
-	private static <T> T createProxy(T instancia, HashMap<String,Field> oneToManyFields)
-	{
-		Enhancer enhancer=new Enhancer();
-		enhancer.setSuperclass(instancia.getClass());
-		enhancer.setCallback(new MethodInterceptor() {
-		    @Override
-		    public Object intercept(Object obj, Method method, Object[] args, MethodProxy proxy)
-		        throws Throwable {
-		    	System.out.println("proxy signature: "+proxy.getSignature());
-		        return proxy.invokeSuper(obj, args);
-		    }
-		  });
-		return (T)enhancer.create();
+		return new Interceptor(instancia, metadataEntry, metadataHM);
 	}
 
 	private static String generateConditionPK(MetaData metadataEntry, Integer id)
@@ -201,12 +191,14 @@ public class XpressUTN
 		for(Entry<String,MetaData> entry:((HashMap<String,MetaData>)metadataHM).entrySet())
 		{
 			md=entry.getValue();
+			System.out.println(md.getNombreTabla());
 			try
 			{
 				while(resultSet.next())
 				{
 					instancia=getInstance(md.getClase());
-					for(int index=1; index<=md.getPrimitivosField().size()+md.getManyToOneColumns().size(); index++)
+					for(int index=1; index<=md.getPrimitivosField().size()+md.getNonLazyEntitiesColumn().size(); index++)
+//						for(int index=1; index<=md.getPrimitivosField().size()+md.getManyToOneColumns().size(); index++)
 					{
 						if(index<=md.getPrimitivosField().size())
 						{
@@ -217,7 +209,8 @@ public class XpressUTN
 						{
 							Field fd=md.getJoinFieldByIndex(index-md.getPrimitivosField().size()-1);
 							Method metodo=md.getSetter(fd);
-							Object p=findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index));
+//							Object p=findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index));
+							Object p=findWithLocalHM(md.getNonLazyEntitiesColumn().get("id_"+fd.getName()),resultSet.getObject(index));
 							metodo.invoke(instancia,p);
 						}
 					}
@@ -270,14 +263,6 @@ public class XpressUTN
 	{
 		ResultSet rs;
 		rs=conexion.createStatement().executeQuery(queryStr);
-		// Integer columnsCount = rs.getMetaData().getColumnCount();
-		// while (rs.next()) {
-		// for(int index = 1; index <= columnsCount; index++){
-		// System.out.print(rs.getString(rs.getMetaData().getColumnName(index))
-		// + " ");
-		// }
-		// System.out.println();
-		// }
 		return rs;
 	}
 
@@ -303,7 +288,7 @@ public class XpressUTN
 				campos.add(metadataEntry.getNombreAlias()+"."+campo);
 			}
 
-			for(Entry<String,Class> joinValues:metadataEntry.getManyToOneColumns().entrySet())
+			for(Entry<String,Class> joinValues:metadataEntry.getNonLazyEntitiesColumn().entrySet())
 			{
 				String nombreTablaSecundaria=((Table)joinValues.getValue().getAnnotation(Table.class)).name();
 				nombreTablaSecundaria=formatNombreTabla(nombreTablaSecundaria);
@@ -332,7 +317,6 @@ public class XpressUTN
 
 	private static <T> void setMetaDataHM(HashMap<String,MetaData> metadataHM, Class<T> dtoClass)
 	{
-		System.out.println(dtoClass.getName());
 		MetaData clase=new MetaData();
 		String tableName=dtoClass.getAnnotation(Table.class).name();
 		clase.setNombreTabla(formatNombreTabla(tableName));
@@ -375,13 +359,16 @@ public class XpressUTN
 			if(variable.isAnnotationPresent(ManyToOne.class))
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
-				// TODO: tratar diferenciado los lazy/eager
-				String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
-				clase.getManyToOneColumns().put(key,variable.getType());
-				clase.getManyToOneColumnsField().put(key,variable);
+
 				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY){
 					// de clave debería poner el getter
-					clase.getLazyFields().put(key, variable);
+					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+					clase.getManyToOneColumns().put(key,variable.getType());
+					clase.getManyToOneColumnsField().put(key,variable);
+					clase.getLazyFields().put("get"+variable.getName().toLowerCase(), variable);
+				} else {
+					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+					clase.getNonLazyEntitiesColumn().put(key, variable.getType());
 				}
 			}
 			if(variable.isAnnotationPresent(OneToMany.class))
@@ -393,7 +380,8 @@ public class XpressUTN
 
 		metadataHM.put(clase.getNombreTabla(),clase);
 
-		for(Entry<String,Class> entry:clase.getManyToOneColumns().entrySet())
+		for(Entry<String,Class> entry:clase.getNonLazyEntitiesColumn().entrySet())
+//			for(Entry<String,Class> entry:clase.getManyToOneColumns().entrySet())
 		{
 			setMetaDataHM(metadataHM,entry.getValue());
 		}
@@ -419,10 +407,10 @@ public class XpressUTN
 	// query = SELECT * FROM Usuario x WHERE x.persona.nombre LIKE ?
 	public static <T> List<T> query(Class<T> dtoClass, String query, Object args)
 	{
-		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
-//		metadataHM.clear();
-		setMetaDataHM(metadataHM,dtoClass);
 		List resultSetObject = null;
+
+		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
+		setMetaDataHM(metadataHM,dtoClass);
 
 		MetaData metadataEntry=getEntryMetadataHM(dtoClass,metadataHM);
 
