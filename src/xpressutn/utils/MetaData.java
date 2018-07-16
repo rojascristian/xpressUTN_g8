@@ -25,6 +25,7 @@ public class MetaData
 	private LinkedHashMap<String,Field> manyToOneColumnsField;
 	private LinkedHashMap<String, Field> oneToManyColumnsField;
 	private LinkedHashMap<String, Field> lazyFields;
+	private HashMap<String, Class> nonLazyEntitiesColumn;
 	
 	public MetaData(){
 		this.primitivos = new ArrayList<String>();
@@ -34,6 +35,7 @@ public class MetaData
 		this.metodos = new ArrayList<Method>();
 		this.oneToManyColumnsField = new LinkedHashMap<String, Field>();
 		this.lazyFields = new LinkedHashMap<String, Field>();
+		this.nonLazyEntitiesColumn = new LinkedHashMap<String, Class>();
 	}
 	
 	public String getNombreTabla()
@@ -167,6 +169,16 @@ public class MetaData
 	public void setLazyFields(LinkedHashMap<String,Field> lazyFields)
 	{
 		this.lazyFields=lazyFields;
+	}
+
+	public HashMap<String,Class> getNonLazyEntitiesColumn()
+	{
+		return nonLazyEntitiesColumn;
+	}
+
+	public void setNonLazyEntitiesColumn(HashMap<String,Class> nonLazyEntitiesColumn)
+	{
+		this.nonLazyEntitiesColumn=nonLazyEntitiesColumn;
 	}
 
 }
