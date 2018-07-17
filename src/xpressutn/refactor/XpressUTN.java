@@ -46,7 +46,6 @@ public class XpressUTN
 		String queryStr=queryFindAll(metadataHM);
 		String queryWhereId=generateConditionPK(metadataEntry,(Integer)id);
 		String query=queryStr+queryWhereId;
-		System.out.println(query);
 		try
 		{
 			ResultSet resultSet=printQueryResult(query);
@@ -148,7 +147,6 @@ public class XpressUTN
 		for(Entry<String,MetaData> entry:((HashMap<String,MetaData>)metadataHM).entrySet())
 		{
 			md=entry.getValue();
-			System.out.println(md.getNombreTabla());
 			try
 			{
 				while(resultSet.next())
@@ -166,8 +164,13 @@ public class XpressUTN
 						{
 							Field fd=md.getJoinFieldByIndex(index-md.getPrimitivosField().size()-1);
 							Method metodo=md.getSetter(fd);
-//							Object p=findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index));
-							Object p=findWithLocalHM(md.getNonLazyEntitiesColumn().get("id_"+fd.getName()),resultSet.getObject(index));
+							Object p = null;
+							if(fd.isAnnotationPresent(ManyToOne.class)){
+								Annotation anotacionObtenida=fd.getAnnotation(ManyToOne.class);
+								p=findWithLocalHM(md.getNonLazyEntitiesColumn().get(((ManyToOne)anotacionObtenida).columnName()).getType(),resultSet.getObject(index));
+							} else {
+								p=findWithLocalHM(md.getNonLazyEntitiesColumn().get("id_"+fd.getName()).getType(),resultSet.getObject(index));
+							}
 							metodo.invoke(instancia,p);
 						}
 					}
@@ -251,9 +254,10 @@ public class XpressUTN
 				campos.add(metadataEntry.getNombreAlias()+"."+((ManyToOne)anotacionObtenida).columnName());
 			}
 
-			for(Entry<String,Class> joinValues:metadataEntry.getNonLazyEntitiesColumn().entrySet())
+			for(Entry<String,Field> joinValues:metadataEntry.getNonLazyEntitiesColumn().entrySet())
 			{
-				String nombreTablaSecundaria=((Table)joinValues.getValue().getAnnotation(Table.class)).name();
+//				String nombreTablaSecundaria=((Table)joinValues.getValue().getAnnotation(Table.class)).name();
+				String nombreTablaSecundaria=((Table)joinValues.getValue().getType().getAnnotation(Table.class)).name();
 				nombreTablaSecundaria=formatNombreTabla(nombreTablaSecundaria);
 				MetaData claseSecundaria=metadataHM.get(nombreTablaSecundaria);
 				String tablaSecundaria=claseSecundaria.getNombreTabla();
@@ -273,7 +277,7 @@ public class XpressUTN
 	{
 		String selectQuery="SELECT "+String.join(", ",campos)+"\n";
 		String fromQuery="FROM "+tablaFrom+" "+alias+"\n";
-		String joinQuery=String.join("\n",joinStr);
+		String joinQuery=String.join(" \n ",joinStr);
 		String queryString=selectQuery+fromQuery+joinQuery;
 		return queryString;
 	}
@@ -322,15 +326,15 @@ public class XpressUTN
 			if(variable.isAnnotationPresent(ManyToOne.class))
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
+				String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+				clase.getManyToOneColumns().put(key,variable.getType());
+				clase.getManyToOneColumnsField().put(key,variable);
 				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY){
-					// de clave debería poner el getter
-					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
-					clase.getManyToOneColumns().put(key,variable.getType());
-					clase.getManyToOneColumnsField().put(key,variable);
 					clase.getLazyFields().put("get"+variable.getName().toLowerCase(), variable);
 				} else {
-					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
-					clase.getNonLazyEntitiesColumn().put(key, variable.getType());
+//					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
+//					clase.getNonLazyEntitiesColumn().put(key, variable.getType());
+					clase.getNonLazyEntitiesColumn().put(key, variable);
 				}
 			}
 			if(variable.isAnnotationPresent(OneToMany.class))
@@ -342,10 +346,10 @@ public class XpressUTN
 
 		metadataHM.put(clase.getNombreTabla(),clase);
 
-		for(Entry<String,Class> entry:clase.getNonLazyEntitiesColumn().entrySet())
+		for(Entry<String,Field> entry:clase.getNonLazyEntitiesColumn().entrySet())
 //			for(Entry<String,Class> entry:clase.getManyToOneColumns().entrySet())
 		{
-			setMetaDataHM(metadataHM,entry.getValue());
+			setMetaDataHM(metadataHM,entry.getValue().getType());
 		}
 	}
 
@@ -410,7 +414,7 @@ public class XpressUTN
 		List<String> cadenaAliasPuntoPropiedad=new ArrayList<String>();
 		String nombrePropiedad=separarCadenaPropiedades(joins,cadenaPropiedades);
 		generarCadenaPropiedades(metadataHM, metadata,joins,nombrePropiedad,cadenaAliasPuntoPropiedad);
-		cadenaAliasPuntoPropiedad.remove(0);
+//		cadenaAliasPuntoPropiedad.remove(0);
 		String cadenaStr=String.join(".",cadenaAliasPuntoPropiedad);
 		String operador=getOperadorQueryStr(query);
 		return generateConditionWhere(cadenaStr,operador,valor.toString());
@@ -446,16 +450,35 @@ public class XpressUTN
 	private static String buscarPropiedad(MetaData metadata, String nombrePropiedad)
 	{
 		String columnName=null;
+		Boolean propiedadEncontrada=false;
 		for(Field propiedad:metadata.getPrimitivosField())
 		{
 			Annotation anotacionObtenida=propiedad.getAnnotation(Column.class);
 			columnName=(((Column)anotacionObtenida).name().equals(""))?propiedad.getName():((Column)anotacionObtenida).name();
 			if(columnName.equals(nombrePropiedad))
 			{
+				propiedadEncontrada=true;
 				break;
 			}
 		}
-		return columnName;
+		if(propiedadEncontrada){
+			return columnName;
+		} else {
+			for(Entry<String, Field> entry: metadata.getNonLazyEntitiesColumn().entrySet()){
+				Field campoLazy = entry.getValue();
+				Annotation anotacionObtenida=campoLazy.getAnnotation(ManyToOne.class);
+				columnName = ((ManyToOne)anotacionObtenida).columnName();
+				if(columnName.equals(nombrePropiedad)){
+					propiedadEncontrada=true;
+					break;
+				}
+			}
+		}
+		if(propiedadEncontrada){
+			return columnName;
+		} else{
+			return null;
+		}
 	}
 
 	private static String separarCadenaPropiedades(List<String> joins, String chain)
