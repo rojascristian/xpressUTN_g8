@@ -626,6 +626,7 @@ public class XpressUTN
 					// BUSCO LOS GETTERS PARA TRAER LA INFORMACION
 					// AGREGO LOS DATOS A UNA COLA PARA PODER PONERLOS
 					// EN EL MISMO ORDEN QUE LEO LAS COLUMNAS
+					// si NO tiene @Id || si tiene @Id que NO sea con Identity 
 					if(!atributo.isAnnotationPresent(Id.class)||key!=-1)
 					{
 						valores.add(getter.invoke(obj));
@@ -639,25 +640,27 @@ public class XpressUTN
 						String nombre=atributo.getAnnotation(ManyToOne.class).columnName();
 						getter=conseguirMetodo(atributo.getName(),metodos);
 						Object obtenido=getter.invoke(obj);
-						int keyAux=insertMany(obtenido,clase);
-						valores.add(keyAux);
-						if(nombre.equals("")) query+=conseguirNombreColumndaId(obtenido.getClass())+", ";
-						else query+=nombre+",";
+						if(obtenido != null){
+							int keyAux=insertMany(obtenido,clase);
+							valores.add(keyAux);
+							if(nombre.equals("")) query+=conseguirNombreColumndaId(obtenido.getClass())+", ";
+							else query+=nombre+",";
+						}
 					}
 				}
 				if(atributo.isAnnotationPresent(OneToMany.class))
 				{
-					ParameterizedType objectListType=(ParameterizedType)atributo.getGenericType();
-					Class<?> objectListClass=(Class<?>)objectListType.getActualTypeArguments()[0];
-					if(objectListClass!=claseDto)
-					{
-						getter=conseguirMetodo(atributo.getName(),metodos);
-						List<?> lista=(List<?>)getter.invoke(obj);
-						for(Object nodo:lista)
-						{
-							if(insertMany(nodo,clase)==0) return 0;
-						}
-					}
+//					ParameterizedType objectListType=(ParameterizedType)atributo.getGenericType();
+//					Class<?> objectListClass=(Class<?>)objectListType.getActualTypeArguments()[0];
+//					if(objectListClass!=claseDto)
+//					{
+//						getter=conseguirMetodo(atributo.getName(),metodos);
+//						List<?> lista=(List<?>)getter.invoke(obj);
+//						for(Object nodo:lista)
+//						{
+//							if(insertMany(nodo,clase)==0) return 0;
+//						}
+//					}
 				}
 			}
 		}
@@ -671,6 +674,8 @@ public class XpressUTN
 		for(; i<valores.size(); i++)
 			query+="?,";
 		query=query.substring(0,query.length()-1)+");";
+		
+		System.out.println("query insert \n" + query);
 
 		try
 		{
