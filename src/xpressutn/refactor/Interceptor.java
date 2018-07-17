@@ -35,7 +35,7 @@ public class Interceptor implements MethodInterceptor
 		if(this.metaData.getLazyFields().containsKey(method.getName().toLowerCase()))
 //			if(this.metaData.getOneToManyColumnsField().containsKey(method.getName().toLowerCase()))
 		{
-			System.out.println("método del proxy.\n");
+			System.out.println("método del proxy => "+method.getName());
 //			Field field=this.metaData.getOneToManyColumnsField().get(method.getName().toLowerCase());
 			Field field=this.metaData.getLazyFields().get(method.getName().toLowerCase());
 			Class clase=getClassParametized(field);
@@ -56,8 +56,7 @@ public class Interceptor implements MethodInterceptor
 			}
 			return null;
 		}
-		System.out.println("método de la clase.");
-		System.out.println(method.getName());
+		System.out.println("método de la clase => "+method.getName());
 		return proxy.invoke(target,args);
 	}
 	
