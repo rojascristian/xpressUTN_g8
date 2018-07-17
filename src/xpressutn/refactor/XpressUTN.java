@@ -36,8 +36,6 @@ public class XpressUTN
 
 	public static <T> T find(Class<T> dtoClass, Object id)
 	{
-		// HashMap<String, MetaData> metadataHM = new
-		// LinkedHashMap<String,MetaData>();
 		LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
 		T instancia=null;
 		metadataHM.clear();
@@ -45,7 +43,10 @@ public class XpressUTN
 
 		MetaData metadataEntry=getMetaDataHMByClass(metadataHM,dtoClass);
 
-		String query=generateExplicitQuery(id,metadataHM,metadataEntry);
+		String queryStr=queryFindAll(metadataHM);
+		String queryWhereId=generateConditionPK(metadataEntry,(Integer)id);
+		String query=queryStr+queryWhereId;
+		System.out.println(query);
 		try
 		{
 			ResultSet resultSet=printQueryResult(query);
@@ -106,9 +107,6 @@ public class XpressUTN
 		List resultSetObject=null;
 		try
 		{
-			// HashMap<String, MetaData> metadataHM = new
-			// LinkedHashMap<String,MetaData>();
-//			metadataHM.clear();
 			LinkedHashMap<String, MetaData> metadataHM=new LinkedHashMap<String,MetaData>();
 			setMetaDataHM(metadataHM,dtoClass);
 
@@ -126,13 +124,11 @@ public class XpressUTN
 
 	private static List getAllResults(ResultSet resultSet, LinkedHashMap<String,MetaData> metadataHM)
 	{
-//		return transformResultSetToObjectList(resultSet);
 		return transformResultSetToObjectList(resultSet, metadataHM);
 	}
 
 	private static Object getFirst(ResultSet resultSet, LinkedHashMap<String,MetaData> metadataHM) throws SQLException
 	{
-//		List resultSetList=transformResultSetToObjectList(resultSet);
 		List resultSetList=transformResultSetToObjectList(resultSet, metadataHM);
 		return resultSetList.get(0);
 	}
@@ -142,45 +138,6 @@ public class XpressUTN
 		List resultSetList=transformResultSetToObjectList(resultSet,metaDataLocalHM);
 		return resultSetList.get(0);
 	}
-
-//	private static List transformResultSetToObjectList(ResultSet resultSet, HashMap<String,MetaData> metaDataLocalHM)
-//	{
-//		Object instancia=null;
-//		MetaData md=null;
-//		List resultados=new ArrayList();
-//		int i=0;
-//		for(Entry<String,MetaData> entry:metaDataLocalHM.entrySet())
-//		{
-//			md=entry.getValue();
-//			try
-//			{
-//				while(resultSet.next())
-//				{
-//					instancia=getInstance(md.getClase());
-//					for(int index=1; index<=md.getPrimitivosField().size()+md.getManyToOneColumns().size(); index++)
-//					{
-//						if(index<=md.getPrimitivosField().size())
-//						{
-//							Method metodo=md.getSetter(md.getPrimitivosField().get(index-1));
-//							metodo.invoke(instancia,resultSet.getObject(index));
-//						}
-//						else
-//						{
-//							Field fd=md.getJoinFieldByIndex(index-md.getPrimitivosField().size()-1);
-//							Method metodo=md.getSetter(fd);
-//							metodo.invoke(instancia,findWithLocalHM(md.getManyToOneColumns().get("id_"+fd.getName()),resultSet.getObject(index)));
-//						}
-//					}
-//					resultados.add(instancia);
-//				}
-//			}
-//			catch(Exception e)
-//			{
-//				e.printStackTrace();
-//			}
-//		}
-//		return resultados;
-//	}
 
 	private static List transformResultSetToObjectList(ResultSet resultSet, HashMap<String,MetaData> metadataHM)
 	{
@@ -259,7 +216,7 @@ public class XpressUTN
 		return constructorDtoClass.newInstance();
 	}
 
-	private static ResultSet printQueryResult(String queryStr) throws SQLException
+	protected static ResultSet printQueryResult(String queryStr) throws SQLException
 	{
 		ResultSet rs;
 		rs=conexion.createStatement().executeQuery(queryStr);
@@ -286,6 +243,12 @@ public class XpressUTN
 			for(String campo:metadataEntry.getPrimitivos())
 			{
 				campos.add(metadataEntry.getNombreAlias()+"."+campo);
+			}
+			
+			for(Entry<String, Field> fieldEntry: metadataEntry.getManyToOneColumnsField().entrySet()){
+				Field campoLazy = fieldEntry.getValue();
+				Annotation anotacionObtenida=campoLazy.getAnnotation(ManyToOne.class);
+				campos.add(metadataEntry.getNombreAlias()+"."+((ManyToOne)anotacionObtenida).columnName());
 			}
 
 			for(Entry<String,Class> joinValues:metadataEntry.getNonLazyEntitiesColumn().entrySet())
@@ -359,7 +322,6 @@ public class XpressUTN
 			if(variable.isAnnotationPresent(ManyToOne.class))
 			{
 				Annotation anotacionObtenida=variable.getAnnotation(ManyToOne.class);
-
 				if(((ManyToOne)anotacionObtenida).fetchType()==ManyToOne.LAZY){
 					// de clave debería poner el getter
 					String key=(((ManyToOne)anotacionObtenida).columnName().equals(""))?"id_"+variable.getName():((ManyToOne)anotacionObtenida).columnName();
@@ -818,4 +780,5 @@ public class XpressUTN
 		if(devuelto==null) return insert(dto);
 		else return update(dto);
 	}
+	
 }
