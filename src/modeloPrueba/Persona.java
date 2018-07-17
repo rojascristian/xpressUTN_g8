@@ -7,7 +7,7 @@ import xpressutn.annotations.*;
 @Table(name="persona")
 public class Persona
 {
-	@Id(strategy=Id.IDENTITY)
+	@Id(strategy=Id.ASSIGNED)
 	@Column(name="id_persona")
 	private Integer idPersona;
 	

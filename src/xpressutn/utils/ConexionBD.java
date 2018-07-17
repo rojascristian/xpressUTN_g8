@@ -39,8 +39,6 @@ public class ConexionBD
 			String usuario_password=prop.getProperty("jdbc.connection.password").trim();
 
 			con=DriverManager.getConnection(conexion_url,usuario_conexion,usuario_password);
-			// TODO: borrar si se usa la default
-			con.setSchema("XPRESS");
 		}
 		catch(IOException ex)
 		{
