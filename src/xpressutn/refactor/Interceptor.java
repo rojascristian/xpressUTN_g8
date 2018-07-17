@@ -4,6 +4,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,10 +51,9 @@ public class Interceptor implements MethodInterceptor
 			} else if(field.isAnnotationPresent(ManyToOne.class)){
 //				TODO: OBTENER LA SENTENCIA SQL QUE TENGA TODOS LOS CAMPOS(sean o no lazy)
 				String str = XpressUTN.generateExplicitQuery(getterMethodPK.invoke(obj),this.metaDataHM, this.metaData);
-				System.out.println(str);
-//				XpressUTN.query(this.metaData.getClase(),xql,getterMethodPK.invoke(obj));
+				Integer pkManyToOneColumn = this.getIdManyToOneColumn(XpressUTN.printQueryResult(str), field);
+				return XpressUTN.find(field.getType(),pkManyToOneColumn);
 			}
-//			setterMethod.invoke(obj,objectList);
 			return null;
 		}
 		System.out.println("método de la clase.");
@@ -60,6 +61,19 @@ public class Interceptor implements MethodInterceptor
 		return proxy.invoke(target,args);
 	}
 	
+	private Integer getIdManyToOneColumn(ResultSet resultSet, Field field) throws SQLException
+	{
+		Integer pkManyToOne = null;
+		Annotation anotacionObtenida=field.getAnnotation(ManyToOne.class);
+		while(resultSet.next())
+		{
+			String columnName = ((ManyToOne)anotacionObtenida).columnName();
+			pkManyToOne = (Integer)resultSet.getObject(columnName);
+		}
+
+		return pkManyToOne;
+	}
+
 	private Method getMethodPK()
 	{
 		Method setterMethod = null;
