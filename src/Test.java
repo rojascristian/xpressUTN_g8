@@ -59,4 +59,34 @@ public class Test
 		}
 		
 	}
+	
+	@org.junit.Test
+	public void testFindAll() throws IllegalAccessException,InstantiationException,NoSuchMethodException,IllegalArgumentException,
+			NoSuchFieldException,ClassNotFoundException
+	{
+//		Connection con=xpressConnectionFactory.getConnection();
+		List<Persona> lst = XpressUTN.findAll(Persona.class);
+		for(Persona p : lst) {
+			System.out.println(p);
+		}
+		Ocupacion o=new Ocupacion();
+		o.setIdOcupacion(7);
+		o.setDescripcion("Estudiante");
+
+		Persona p=new Persona();
+		p.setIdPersona(22);
+		p.setNombre("PabloTest");
+		p.setOcupacion(o);
+
+		int i=XpressUTN.insert(p);
+		System.out.println("Se inserto "+i+" registros");
+		
+		p.setNombre("Julian");
+		i=XpressUTN.update(p);
+		System.out.println("Se actualizo "+i+" registros");
+
+		i=XpressUTN.delete(Persona.class,22);
+		System.out.println("Se elimino "+i+" registros");
+	}
+	
 }
