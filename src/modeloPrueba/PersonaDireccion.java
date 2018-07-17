@@ -6,7 +6,8 @@ import xpressutn.annotations.*;;
 public class PersonaDireccion
 {
 	@Id(strategy=Id.IDENTITY)
-	@ManyToOne(columnName="id_persona_direccion")
+//	@ManyToOne(columnName="id_persona_direccion")
+	@Column(name="id_persona_direccion")
 	private Integer idPersonaDireccion;
 	
 	@ManyToOne(columnName="id_persona")
